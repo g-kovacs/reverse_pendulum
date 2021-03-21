@@ -8,7 +8,7 @@ A használt Python környezet beállításai.
 
 ### Python verzió
 
-Nálam épp Python 3.8.5. van telepítve, kiindulhatunk ebből is, de megnézhetjük a legfrissebbb 3.9-et is, a lényeg, hogy ne 2-es verziónk legyen. Az is előfordulhat, hogy korábbi 3-as verzió kell majd néhány könyvtár miatt, majd alkalmazkodunk.
+Maradjunk a Python3.8 verziónál, azzal Anaconda, TensorFlow és minden egyéb működni fog.
 
 ### Python modulok
 
