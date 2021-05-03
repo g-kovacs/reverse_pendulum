@@ -1,57 +1,95 @@
-from dataclasses import dataclass
+import gym
+from gym.utils import seeding
+from gym import error, spaces, utils
+from dataclasses import dataclass, replace as dt_replace
+import numpy as np
+from copy import copy
 
-@dataclass
-class Rotatable:
-  rotation: float 
-  angular_momentum: float
-
-@dataclass
-class Cart(Rotatable):
-  position: float
-  idx: int
-  momentum: float
-  wheel: Rotatable
-  pendulum: Rotatable
 
 @dataclass
 class State:
-  cart1: Cart
+    p_G: float = 0.0
+    p_dG: float = 0.0
+    c_X: float = 0.0
+    c_dX: float = 0.0
+
 
 @dataclass
 class Action:
-  torque1: float
+    torq: float
 
-class Environment:
-  # Cart data
-  w_mass = 0.1
-  c_mass = 1
-  p_mass = 0.1
-  p_length = 0.8
-  w_radius = 0.2
-  friction = 1
 
-  # Universal constants
-  g = 9.81
+class DoubleCartPoleEnv(gym.Env):
+    @property
+    def action_space(self):
+        return self._action_space
 
-  # Computed values
-  p_angular_mass = 1/3 * p_mass * (p_length ** 2)
-  w_angular_mass = 1/2 * w_mass * (w_radius ** 2)
-  total_mass = c_mass + 2*w_mass + p_mass
+    @property
+    def observation_space(self):
+        return self._observation_space
 
-  def __init__(self, timeStep = 0.1, cartCount = 1):
-    self.dt = timeStep
-    self.cartCount = cartCount
+    def __init__(self, timeStep=0.1):
+        # Boundaries
+        self.maxX = 3
+        self.maxG = 0.8
+        self.maxT = 1
 
-  def step(self, state, action):
-    state.cart1.wheel.angular_momentum += self.dt * action.torque1
+        # Cart data
+        self.mC = 1
+        self.mP = 0.1
+        self.lenP = 0.8
+        self.radW = 0.2
+        self.friction = 1
+        self.coefR = 0.001
 
-    wheelForce = state.cart1.wheel.angular_momentum / w_radius
-    pressingForce = totalMass / 2 * g
-    rotatingForce = max(wheelForce - pressingForce * friction, 0)
+        # Universal constants
+        self.g = 9.81
 
-    angularVelocity = rotatingForce * w_radius / w_angular_mass
-    state.cart1.wheel.rotation += angularVelocity * self.dt
+        # Computed values
+        self.p_I = 1/3 * self.mP * (self.lenP ** 2)
+        self.mTot = self.mC + self.mP
+        self.dt = timeStep
+        self._action_space = spaces.Box(-self.maxT, self.maxT, shape=(1,))
+        boundary = np.array([self.maxG*2,
+                             np.finfo(np.float32).max,
+                             self.maxX*2,
+                             np.finfo(np.float32).max],
+                            dtype=np.float32)
+        self._observation_space = spaces.Box(-boundary,
+                                             boundary, dtype=np.float32)
+        
+        self.reset()
 
-    state.cart1.momentum += 2 * rotatingForce
-    cVelocity = state.cart1.momentum / c_mass
-    state.cart1.position += self.dt * cVelocity
+    def step(self, action):
+        F = (2.0*action - self.coefR*self.mTot*self.g/2.0)/self.radW
+
+        _a = (-1 * F - self.mP * 0.5 * self.lenP * (self.state.p_dG ** 2) *
+              np.sin(self.state.p_G)) / self.mTot
+        _b = (4/3 - self.mP * (np.cos(self.state.p_g) ** 2) / self.mTot)
+
+        p_ddG = (self.g * np.sin(self.state.p_G) + np.cos(self.state.p_G) * _a) \
+            / (0.5 * self.lenP * _b)
+
+        _c = (self.state.p_dG ** 2) * np.sin(self.state.p_G) - \
+            p_ddG * np.cos(self.state.p_G)
+        c_ddX = (F + self.mP * 0.5 * self.lenP * _c) / self.mTot
+
+        self.state.c_dX += self.dt * c_ddX
+        self.state.c_X += self.dt * self.state.c_dX
+
+        self.state.p_dG += self.dt * p_ddG
+        self.state.p_G += self.dt * self.state.p_dG
+
+        terminate = False
+        if np.abs(self.state.p_G) > self.maxG or np.abs(self.state.c_X) > self.maxX:
+            terminate = True
+        return dt_replace(self.state), action, .0, terminate
+
+    def reset(self):
+        self.state = State(p_dG=0.1)
+
+    def render(self, mode='human'):
+        pass
+
+    def close(self):
+        pass
