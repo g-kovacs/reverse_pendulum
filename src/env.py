@@ -59,6 +59,7 @@ class DoubleCartPoleEnv(gym.Env):
                                              boundary, dtype=np.float32)
         
         self.reset()
+        self.viewer = None
 
     def step(self, action):
         F = (2.0*action - self.coefR*self.mTot*self.g/2.0)/self.radW
@@ -92,4 +93,6 @@ class DoubleCartPoleEnv(gym.Env):
         pass
 
     def close(self):
-        pass
+        if self.viewer:
+          self.viewer.close()
+          self.viewer = None
