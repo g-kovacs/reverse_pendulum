@@ -1,9 +1,7 @@
 import gym
-from gym.utils import seeding
-from gym import error, spaces, utils
+from gym import spaces
 from dataclasses import dataclass, replace as dt_replace
 import numpy as np
-from copy import copy
 
 
 @dataclass
@@ -13,10 +11,8 @@ class State:
     c_X: float = 0.0
     c_dX: float = 0.0
 
-
-@dataclass
-class Action:
-    torq: float
+    def flatten(self):
+        return np.array([self.p_G, self.p_dG, self.c_X, self.c_dX])
 
 
 class DoubleCartPoleEnv(gym.Env):
@@ -49,7 +45,7 @@ class DoubleCartPoleEnv(gym.Env):
         self.p_I = 1/3 * self.mP * (self.lenP ** 2)
         self.mTot = self.mC + self.mP
         self.dt = timeStep
-        self._action_space = spaces.Box(-self.maxT, self.maxT, shape=(1,))
+        self._action_space = spaces.Discrete(7) #spaces.Box(-self.maxT, self.maxT, shape=(1,))
         boundary = np.array([self.maxG*2,
                              np.finfo(np.float32).max,
                              self.maxX*2,
@@ -62,7 +58,8 @@ class DoubleCartPoleEnv(gym.Env):
         self.viewer = None
 
     def step(self, action):
-        F = (2.0*action - self.coefR*self.mTot*self.g/2.0)/self.radW
+        tourque = np.linspace(-self.maxT, self.maxT, self.action_space.n)[action]
+        F = (2.0*tourque - self.coefR*self.mTot*self.g/2.0)/self.radW
 
         sinG = np.sin(self.state.p_G)
         cosG = np.cos(self.state.p_G)
@@ -87,17 +84,18 @@ class DoubleCartPoleEnv(gym.Env):
         terminate = False
         if np.abs(self.state.p_G) > self.maxG or np.abs(self.state.c_X) > self.maxX:
             terminate = True
-        return dt_replace(self.state), action, .0, terminate
+        return np.array(dt_replace(self.state).flatten()), action, 1.0, terminate
 
     def reset(self):
         self.state = State(p_dG=0.01)
+        return np.array(dt_replace(self.state).flatten())
 
     def render(self, mode='human'):
         screen_w = 600
         screen_h = 400
 
         world_width = self.maxX * 1.5
-        scale = screen_width/world_width
+        scale = screen_w/world_width
         car_top = 100  # TOP OF CART
         pole_w = 10.0
         polelen = scale * self.lenP
@@ -161,7 +159,7 @@ class DoubleCartPoleEnv(gym.Env):
         pole.v = [(l, b), (l, t), (r, t), (r, b)]
 
         s = self.state
-        carX = s.c_X * scale + screen_w / 2 # middle of cart
+        carX = s.c_X * scale + screen_w / 2  # middle of cart
         self.wheeltrans_l.set_translation(carX - 1/3 * car_w, wheel_r)
         self.wheeltrans_r.set_translation(carX + 1/3 * car_w, wheel_r)
         self.cartrans.set_translation(carX, car_top + wheel_r)
@@ -171,3 +169,7 @@ class DoubleCartPoleEnv(gym.Env):
         if self.viewer:
             self.viewer.close()
             self.viewer = None
+
+env = DoubleCartPoleEnv()
+env.render()
+input("asdfs")
