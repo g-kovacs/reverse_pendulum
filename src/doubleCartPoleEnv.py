@@ -28,7 +28,7 @@ class DoubleCartPoleEnv(gym.Env):
         # Boundaries
         self.maxX = 2.4
         self.maxG = 12 * 2 * np.pi / 360
-        self.maxT = 1
+        self.maxT = 0.8
 
         # Cart data
         self.mC = 1
@@ -111,13 +111,13 @@ class DoubleCartPoleEnv(gym.Env):
             wheel = rendering.make_circle(wheel_r)
             self.wheeltrans_l = rendering.Transform(
                 translation=(-1/3*car_w, wheel_r))
-            wheel.set_color(.7, .7, .7)
+            wheel.set_color(.6, .6, .6)
             wheel.add_attr(self.wheeltrans_l)
             self.viewer.add_geom(wheel)
             wheel = rendering.make_circle(wheel_r)
             self.wheeltrans_r = rendering.Transform(
                 translation=(1/3*car_w, wheel_r))
-            wheel.set_color(.7, .7, .7)
+            wheel.set_color(.6, .6, .6)
             wheel.add_attr(self.wheeltrans_r)
             self.viewer.add_geom(wheel)
 
@@ -168,7 +168,12 @@ class DoubleCartPoleEnv(gym.Env):
             self.viewer.close()
             self.viewer = None
 
-env=DoubleCartPoleEnv()
-env.reset()
-env.render()
-input("")
+
+def preview():
+    env=DoubleCartPoleEnv()
+    env.reset()
+    env.render()
+    input("")
+
+if __name__ == "__main__":
+    preview()
