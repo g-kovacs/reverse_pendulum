@@ -45,7 +45,8 @@ class DoubleCartPoleEnv(gym.Env):
         self.p_I = 1/3 * self.mP * (self.lenP ** 2)
         self.mTot = self.mC + self.mP
         self.dt = timeStep
-        self._action_space = spaces.Discrete(7) #spaces.Box(-self.maxT, self.maxT, shape=(1,))
+        # spaces.Box(-self.maxT, self.maxT, shape=(1,))
+        self._action_space = spaces.Discrete(7)
         boundary = np.array([self.maxG*2,
                              np.finfo(np.float32).max,
                              self.maxX*2,
@@ -54,11 +55,11 @@ class DoubleCartPoleEnv(gym.Env):
         self._observation_space = spaces.Box(-boundary,
                                              boundary, dtype=np.float32)
 
-        self.reset()
         self.viewer = None
 
     def step(self, action):
-        tourque = np.linspace(-self.maxT, self.maxT, self.action_space.n)[action]
+        tourque = np.linspace(-self.maxT, self.maxT,
+                              self.action_space.n)[action]
         F = (2.0*tourque - self.coefR*self.mTot*self.g/2.0)/self.radW
 
         sinG = np.sin(self.state.p_G)
@@ -84,7 +85,7 @@ class DoubleCartPoleEnv(gym.Env):
         terminate = False
         if np.abs(self.state.p_G) > self.maxG or np.abs(self.state.c_X) > self.maxX:
             terminate = True
-        return np.array(dt_replace(self.state).flatten()), action, 1.0, terminate
+        return np.array(dt_replace(self.state).flatten()), 1.0, terminate, {"action": action}
 
     def reset(self):
         self.state = State(p_dG=0.01)
@@ -107,7 +108,7 @@ class DoubleCartPoleEnv(gym.Env):
             from gym.envs.classic_control import rendering
             self.viewer = rendering.Viewer(screen_w, screen_h)
 
-            # Wheel geometry
+            """ # Wheel geometry
             wheel = rendering.make_circle(wheel_r)
             self.wheeltrans_l = rendering.Transform(
                 translation=(-1/3*car_w, wheel_r))
@@ -142,19 +143,19 @@ class DoubleCartPoleEnv(gym.Env):
             axle.add_attr(self.poletrans)
             axle.add_attr(self.cartrans)
             axle.set_color(.5, .5, .8)
-            self.viewer.add_geom(axle)
+            self.viewer.add_geom(axle) """
 
             # Ground
             ground = rendering.Line((0, car_top), (screen_w, car_top))
             ground.set_color(0, 0, 0)
             self.viewer.add_geom(ground)
 
-            self._pole_geom = pole
+            #self._pole_geom = pole
 
         if self.state is None:
             return None
 
-        pole = self._pole_geom
+        """ pole = self._pole_geom
         l, r, t, b = -pole_w / 2, pole_w / 2, polelen, 0
         pole.v = [(l, b), (l, t), (r, t), (r, b)]
 
@@ -163,13 +164,9 @@ class DoubleCartPoleEnv(gym.Env):
         self.wheeltrans_l.set_translation(carX - 1/3 * car_w, wheel_r)
         self.wheeltrans_r.set_translation(carX + 1/3 * car_w, wheel_r)
         self.cartrans.set_translation(carX, car_top + wheel_r)
-        self.poletrans.set_rotation(-s.p_G)
+        self.poletrans.set_rotation(-s.p_G) """
 
     def close(self):
         if self.viewer:
             self.viewer.close()
             self.viewer = None
-
-env = DoubleCartPoleEnv()
-env.render()
-input("asdfs")

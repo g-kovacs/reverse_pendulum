@@ -56,11 +56,11 @@ class A2CAgent:
     def test(self, env, render=True):
         obs, done, ep_reward = env.reset(), False, 0
         while not done:
-            action, _ = self.model.action_value(obs[None, :])
-            obs, _, reward, done = env.step(action)
-            ep_reward += reward
             if render:
                 env.render()
+            action, _ = self.model.action_value(obs[None, :])
+            obs, reward, done, _ = env.step(action)
+            ep_reward += reward
         return ep_reward
 
     def _value_loss(self, returns, value):
@@ -104,7 +104,7 @@ class A2CAgent:
                 observations[step] = next_obs.copy()
                 actions[step], values[step] = self.model.action_value(
                     next_obs[None, :])
-                next_obs, _, rewards[step], dones[step] = env.step(
+                next_obs, rewards[step], dones[step], _ = env.step(
                     actions[step])
 
                 ep_rewards[-1] += rewards[step]

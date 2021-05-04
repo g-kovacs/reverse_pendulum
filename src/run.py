@@ -1,16 +1,24 @@
-import env as environment
+from doubleCartPoleEnv import DoubleCartPoleEnv
 import agent as ag
+import gym
 
-def main(train = False):
-    env = environment.DoubleCartPoleEnv()
+def registerEnv():
+    gym.envs.register(
+     id='DoubleCartPoleEnv-v0',
+     entry_point='gym.envs.classic_control:DoubleCartPoleEnv',
+     max_episode_steps=1000,
+)
+
+def run():
+    env = DoubleCartPoleEnv()
     model = ag.Model(num_actions=env.action_space.n)
     agent = ag.A2CAgent(model)
-    if train:
-        rewards_history = agent.train(env)
+    rewards_history = agent.train(env)
     print("Finished training, testing...")
-    print("Starting infinite loop...")
-    while True:
-        agent.test(env)
+    for i in range(200):
+        print("%d out of 200" % agent.test(env,True))
+    
 
 if __name__ == "__main__":
-    main(True)
+    #registerEnv()
+    run()
