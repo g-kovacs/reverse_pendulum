@@ -19,4 +19,11 @@ Nevezzük el egységesen 'env'-nek és akkor a gitignore is egységes lehet majd
 
 Arra figyeljetek, hogy a használni kívánt Python verzióval futtassátok a virtualenvet és akkor arra a verzióra készít linkeket. :)
 
+### Telepítés
+
+TL;DR: install majd run PS szkriptek futtatása
+
+Manuálisan felrakni a virtualenvet és készíteni egy 'env' nevű környezetet. Ott telepíteni a függőségeket, majd az aktiválás </br>
+után a \src mappában a run.py szkriptet kell futtatni.
+
 
