@@ -1,14 +1,14 @@
-from doubleCartPoleEnv import DoubleCartPoleEnv
+from doubleCartPoleEnv import DCPEnv
 import agent as ag
 
 def run():
-    env = DoubleCartPoleEnv()
+    env = DCPEnv()
     model = ag.Model(num_actions=env.action_space.n)
     agent = ag.A2CAgent(model)
     rewards_history = agent.train(env)
     print("Finished training, testing...")
     for i in range(30):
-        print("%d out of 200" % agent.test(env, True))
+        print("Alive for %.1f seconds" % (agent.test(env, True) / 10.0))
 
 
 if __name__ == "__main__":

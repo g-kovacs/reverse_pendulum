@@ -90,7 +90,7 @@ class A2CAgent:
         # Here signs are flipped because the optimizer minimizes.
         return policy_loss - self.entropy_c * entropy_loss
 
-    def train(self, env, batch_sz=64, updates=250):
+    def train(self, env, batch_sz=128, updates=500):
         # Storage helpers for a single batch of data.
         actions = np.empty((batch_sz,), dtype=np.int32)
         rewards, dones, values = np.empty((3, batch_sz))

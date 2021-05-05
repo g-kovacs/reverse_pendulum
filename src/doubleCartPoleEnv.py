@@ -4,18 +4,65 @@ from dataclasses import dataclass, replace as dt_replace
 import numpy as np
 
 
-@dataclass
-class State:
-    p_G: float = 0.0
-    p_dG: float = 0.0
-    c_X: float = 0.0
-    c_dX: float = 0.0
+class DCPEnv(gym.Env):
 
-    def flatten(self):
-        return np.array([self.p_G, self.p_dG, self.c_X, self.c_dX])
+    # Boundaries
+    maxX = 6
+    maxG = 1
+    maxT = 0.94
 
+    # Cart data - !!! MODIFICATIONS HERE !!!
+    car_width = 2
+    lenP = 2.4
+    radW = 0.2
 
-class DoubleCartPoleEnv(gym.Env):
+    # Universal constants
+    g = 9.81
+    coefR = 0.001
+    dt = 0.1
+
+    # Computed values
+    mC = car_width + 2 * (radW ** 2 ) * np.pi
+    mP = lenP * 0.2
+    p_I = 1/3 * mP * (lenP ** 2)
+    mTot = mC + mP
+
+    @dataclass
+    class State:
+        p_G: float = 0.0
+        p_dG: float = 0.0
+        c_X: float = 0.0
+        c_dX: float = 0.0
+
+        def flatten(self):
+            return np.array([self.p_G, self.p_dG, self.c_X, self.c_dX])
+
+        def wind_blow(self, torque):
+            self.p_dG += torque / DCPEnv.p_I * DCPEnv.dt
+
+        def add_torque(self, torque):
+            F = (2.0*torque - DCPEnv.coefR * DCPEnv.mTot * DCPEnv.g/2.0)/DCPEnv.radW
+
+            sinG = np.sin(self.p_G)
+            cosG = np.cos(self.p_G)
+
+            _a = (-1 * F - DCPEnv.mP * 0.5 * DCPEnv.lenP * (self.p_dG ** 2) *
+                  sinG) / DCPEnv.mTot
+            _b = (4/3 - DCPEnv.mP * (cosG ** 2) / DCPEnv.mTot)
+
+            p_ddG = (DCPEnv.g * sinG + cosG * _a) \
+                / (0.5 * DCPEnv.lenP * _b)
+
+            _c = (self.p_dG ** 2) * sinG - \
+                p_ddG * cosG
+            c_ddX = (F + DCPEnv.mP * 0.5 * DCPEnv.lenP * _c) / DCPEnv.mTot
+
+            self.c_dX += DCPEnv.dt * c_ddX
+            self.c_X += DCPEnv.dt * self.c_dX
+
+            self.p_dG += DCPEnv.dt * p_ddG
+            self.p_G += DCPEnv.dt * self.p_dG
+
     @property
     def action_space(self):
         return self._action_space
@@ -25,26 +72,6 @@ class DoubleCartPoleEnv(gym.Env):
         return self._observation_space
 
     def __init__(self, timeStep=0.1):
-        # Boundaries
-        self.maxX = 2.4
-        self.maxG = 12 * 2 * np.pi / 360
-        self.maxT = 0.8
-
-        # Cart data
-        self.mC = 1
-        self.mP = 0.1
-        self.lenP = 1
-        self.radW = 0.2
-        self.friction = 1
-        self.coefR = 0.001
-
-        # Universal constants
-        self.g = 9.81
-
-        # Computed values
-        self.p_I = 1/3 * self.mP * (self.lenP ** 2)
-        self.mTot = self.mC + self.mP
-        self.dt = timeStep
         # spaces.Box(-self.maxT, self.maxT, shape=(1,))
         self._action_space = spaces.Discrete(7)
         boundary = np.array([self.maxG,
@@ -54,33 +81,17 @@ class DoubleCartPoleEnv(gym.Env):
                             dtype=np.float32)
         self._observation_space = spaces.Box(-boundary,
                                              boundary, dtype=np.float32)
-
+        DCPEnv.dt = timeStep
         self.viewer = None
 
     def step(self, action):
         torque = np.linspace(-self.maxT, self.maxT,
-                              self.action_space.n)[action]
-        F = (2.0*torque - self.coefR*self.mTot*self.g/2.0)/self.radW
+                             self.action_space.n)[action]
 
-        sinG = np.sin(self.state.p_G)
-        cosG = np.cos(self.state.p_G)
+        if np.random.random() < 1e-3:
+            self.state.wind_blow(np.random.choice([-self.maxT * 5, self.maxT * 5]))
 
-        _a = (-1 * F - self.mP * 0.5 * self.lenP * (self.state.p_dG ** 2) *
-              sinG) / self.mTot
-        _b = (4/3 - self.mP * (cosG ** 2) / self.mTot)
-
-        p_ddG = (self.g * sinG + cosG * _a) \
-            / (0.5 * self.lenP * _b)
-
-        _c = (self.state.p_dG ** 2) * sinG - \
-            p_ddG * cosG
-        c_ddX = (F + self.mP * 0.5 * self.lenP * _c) / self.mTot
-
-        self.state.c_dX += self.dt * c_ddX
-        self.state.c_X += self.dt * self.state.c_dX
-
-        self.state.p_dG += self.dt * p_ddG
-        self.state.p_G += self.dt * self.state.p_dG
+        self.state.add_torque(torque)
 
         terminate = False
         if np.abs(self.state.p_G) > self.maxG or np.abs(self.state.c_X) > self.maxX:
@@ -88,7 +99,7 @@ class DoubleCartPoleEnv(gym.Env):
         return np.array(dt_replace(self.state).flatten()), 1.0, terminate, {"action": action}
 
     def reset(self):
-        self.state = State(p_dG=0.01)
+        self.state = DCPEnv.State(p_dG=0.01)
         return np.array(dt_replace(self.state).flatten())
 
     def render(self, mode='human'):
@@ -97,15 +108,23 @@ class DoubleCartPoleEnv(gym.Env):
 
         world_width = self.maxX * 2
         scale = screen_w/world_width
-        pole_w = 8.0
+        pole_w = scale * self.mP / self.lenP
         polelen = scale * self.lenP
-        car_w = 70.0
-        car_h = 40.0
-        wheel_r = 8.0
+        car_w = scale * self.car_width
+        car_h = car_w / 2
+        wheel_r = scale * self.radW
 
         if self.viewer is None:
             from gym.envs.classic_control import rendering
             self.viewer = rendering.Viewer(screen_w, screen_h)
+
+            # Car geometry
+            l, r, t, b = -car_w / 2, car_w / 2, car_h, 0
+            car = rendering.FilledPolygon([(l, b), (l, t), (r, t), (r, b)])
+            self.cartrans = rendering.Transform(translation=(0, wheel_r))
+            car.add_attr(self.cartrans)
+            car.set_color(0.3, 0.3, 1)
+            self.viewer.add_geom(car)
 
             # Wheel geometry
             wheel = rendering.make_circle(wheel_r)
@@ -120,14 +139,6 @@ class DoubleCartPoleEnv(gym.Env):
             wheel.set_color(.6, .6, .6)
             wheel.add_attr(self.wheeltrans_r)
             self.viewer.add_geom(wheel)
-
-            # Car geometry
-            l, r, t, b = -car_w / 2, car_w / 2, car_h, 0
-            car = rendering.FilledPolygon([(l, b), (l, t), (r, t), (r, b)])
-            self.cartrans = rendering.Transform(translation=(0, wheel_r))
-            car.add_attr(self.cartrans)
-            car.set_color(0.3, 0.3, 1)
-            self.viewer.add_geom(car)
 
             # Pole geometry
             l, r, t, b = -pole_w / 2, pole_w / 2, polelen, 0
@@ -170,10 +181,11 @@ class DoubleCartPoleEnv(gym.Env):
 
 
 def preview():
-    env=DoubleCartPoleEnv()
+    env = DCPEnv()
     env.reset()
     env.render()
     input("")
+
 
 if __name__ == "__main__":
     preview()
