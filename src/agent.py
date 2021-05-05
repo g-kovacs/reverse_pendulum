@@ -53,6 +53,10 @@ class A2CAgent:
             # Define separate losses for policy logits and value estimate.
             loss=[self._logits_loss, self._value_loss])
 
+    def save(self, path):
+        #self.model.save(path)
+        self.model.save_weights('saves/model_1.0')
+
     def test(self, env, render=True):
         obs, done, ep_reward = env.reset(), False, 0
         while not done:
