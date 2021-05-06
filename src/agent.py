@@ -75,8 +75,8 @@ class A2CAgent:
         # Training loop: collect samples, send to optimizer, repeat updates times.
         ep_rewards = [0.0]
         next_obs = env.reset()
+        model.reset_buffer(next_obs)
         for update in range(updates):
-            model.reset(next_obs)
             for step in range(max_steps):
                 observations[step] = next_obs.copy()
                 actions[step], values[step] = model.action_value(next_obs[None, :], False)

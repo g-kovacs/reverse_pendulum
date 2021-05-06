@@ -9,6 +9,7 @@ class ProbabilityDistribution(tf.keras.Model):
 class BaseModel(tf.keras.Model):
     def __init__(self, name, window_size = 1):
         super().__init__(name)
+        self.label = name
         self.window_size = window_size
         self.dist = ProbabilityDistribution()
     
@@ -16,52 +17,73 @@ class BaseModel(tf.keras.Model):
         self.buffer = np.array([initial_obs.copy() for _ in range(self.window_size)])
 
     def action_value(self, obs, training = True):
-        # If action_value is called for prediction on
+        # If called for prediction on
         # subsequent observations
         if not training and self.window_size > 1:
             np.roll(self.buffer,-1)
             self.buffer[-1] = obs
             obs = self.buffer
-        # Executes `call()` under the hood.
+        
         logits, value = self.predict_on_batch(obs)
         action = self.dist.predict_on_batch(logits)
-        # Another way to sample actions:
-        #   action = tf.random.categorical(logits, 1)
-        # Will become clearer later why we don't use it.
+        
         return np.squeeze(action, axis=-1), np.squeeze(value, axis=-1)
 
 class CNNModel(BaseModel):
     def __init__(self, num_actions):
-        super().__init__('CNN')
-        # Note: no tf.get_variable(), just simple Keras API!
-        self.hidden1 = kl.Dense(128, activation='relu')
-        self.hidden2 = kl.Dense(128, activation='relu')
+        super().__init__('CNNModel', 4)
+        self.cnn = kl.Conv1D(filters=4, kernel_size=2, padding="same")
+        self.norm = kl.BatchNormalization()
+        self.activation = kl.ReLU()
+        self.actor = kl.Dense(64, activation='relu', kernel_initializer='he_normal')
+        self.critic = kl.Dense(64, activation='relu', kernel_initializer='he_normal')
+
         self.value = kl.Dense(1, name='value')
-        # Logits are unnormalized log probabilities.
         self.logits = kl.Dense(num_actions, name='policy_logits')
 
     def call(self, inputs, **kwargs):
-        # Inputs is a numpy array, convert to a tensor.
         x = tf.convert_to_tensor(inputs)
-        # Separate hidden layers from the same input tensor.
-        hidden_logs = self.hidden1(x)
-        hidden_vals = self.hidden2(x)
-        return self.logits(hidden_logs), self.value(hidden_vals)
+        # Decoder
+        x = self.cnn(x)
+        x = self.norm(x)
+        features = self.activation(x)
+        # Actor-Critic
+        hidden_logits = self.actor(features)
+        hidden_values = self.critic(features)
+        return self.logits(hidden_logits), self.value(hidden_values)
 
-class SimpleModel(BaseModel):
+class SimpleAC2(BaseModel):
     def __init__(self, num_actions):
-        super().__init__('Simple')
-        # Note: no tf.get_variable(), just simple Keras API!
-        self.hidden1 = kl.Dense(128, activation='relu')
-        self.hidden2 = kl.Dense(128, activation='relu')
+        super().__init__('SimpleAC2')
+
+        self.actor = kl.Dense(128, activation='relu', kernel_initializer='he_normal')
+        self.critic = kl.Dense(128, activation='relu', kernel_initializer='he_normal')
+
         self.value = kl.Dense(1, name='value')
-        # Logits are unnormalized log probabilities.
         self.logits = kl.Dense(num_actions, name='policy_logits')
 
     def call(self, inputs, **kwargs):
-        # Inputs is a numpy array, convert to a tensor.
         x = tf.convert_to_tensor(inputs)
-        # Separate hidden layers from the same input tensor.
-        hidden_logs = self.hidden1(x)
-        hidden_vals = self.hidden2(x)
-        return self.logits(hidden_logs), self.value(hidden_vals)
+        
+        hidden_logits = self.actor(x)
+        hidden_values = self.critic(x)
+        return self.logits(hidden_logits), self.value(hidden_values)
+
+class SimpleAC(BaseModel):
+    def __init__(self, num_actions):
+        super().__init__('SimpleAC')
+        
+        self.decoder = kl.Dense(64, activation='relu', kernel_initializer='he_normal')
+        self.actor = kl.Dense(32, activation='relu', kernel_initializer='he_normal')
+        self.critic = kl.Dense(32, activation='relu', kernel_initializer='he_normal')
+
+        self.value = kl.Dense(1, name='value')
+        self.logits = kl.Dense(num_actions, name='policy_logits')
+
+    def call(self, inputs, **kwargs):
+        x = tf.convert_to_tensor(inputs)
+        
+        features = self.decoder(x)
+        hidden_logits = self.actor(features)
+        hidden_values = self.critic(features)
+        return self.logits(hidden_logits), self.value(hidden_values)
