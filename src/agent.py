@@ -42,10 +42,9 @@ class A2CAgent:
         #initial sequence of the same states
         obs_buffer = np.array([input[0] for _ in range(window_size)])
         window_num = (input.shape[0]-1)//window_step + 1
-        windows = np.empty((window_num, window_size))
-        indices = np.empty(window_num)
+        windows = np.empty((window_num, window_size, input.shape[1]))
+        indices = [0]*window_num
         windows[0] = obs_buffer.copy()
-        indices[0] = 0
         i = 0
         for window in range(window_num-1):
             # shift obs into sliding window
@@ -95,17 +94,14 @@ class A2CAgent:
 
             # windowing
             if model.window_size > 1:
-                observations, window_indices = self._get_windows( \
+                obs, window_indices = self._get_windows( \
                     model.window_size,
                     window_step,
                     observations,
                     dones)
-                acts_and_advs = acts_and_advs[[window_indices]]
-                returns = returns[[window_indices]]
-
-            # Performs a full training step on the collected batch.
-            # Note: no need to mess around with gradients, Keras API handles it.
-            losses = model.train_on_batch(observations, [acts_and_advs, returns])
+                model.train_on_batch(obs, [acts_and_advs[window_indices], returns[window_indices]])
+            else:
+                model.train_on_batch(observations, [acts_and_advs, returns])
 
         return ep_rewards
 
