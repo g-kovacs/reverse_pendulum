@@ -17,7 +17,7 @@ def run():
     model = SimpleModel(num_actions=env.action_space.n)
     agent = A2CAgent(model)
     starttime = timer()
-    rewards_history = agent.train(env, 256, 256)
+    rewards_history = agent.train(env, 256, 500)
     dt = timer() - starttime
     print("Finished training in %.2f seconds.", dt)
     plt.ion()
