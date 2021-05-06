@@ -5,18 +5,13 @@ import numpy as np
 
 
 class A2CAgent:
-    def __init__(self, model, lr=7e-3, gamma=0.99, value_c=0.5, entropy_c=1e-4):
+    def __init__(self, lr=7e-3, gamma=0.99, value_c=0.5, entropy_c=1e-4):
         # `gamma` is the discount factor
         self.gamma = gamma
         # Coefficients are used for the loss terms.
         self.value_c = value_c
         self.entropy_c = entropy_c
-
-        self.model = model
-        self.model.compile(
-            optimizer=ko.RMSprop(lr=lr),
-            # Define separate losses for policy logits and value estimate.
-            loss=[self._logits_loss, self._value_loss])
+        self.lr = lr
 
     def _value_loss(self, returns, value):
         # Value loss is typically MSE between value estimates and returns.
@@ -43,19 +38,25 @@ class A2CAgent:
         # Here signs are flipped because the optimizer minimizes.
         return policy_loss - self.entropy_c * entropy_loss
 
-    def train(self, env, batch_sz=128, updates=500):
+    def train(self, env, model, max_steps=128, updates=500):
+        model.compile(
+            optimizer=ko.RMSprop(lr=self.lr),
+            # Define separate losses for policy logits and value estimate.
+            loss=[self._logits_loss, self._value_loss])
+
+
         # Storage helpers for a single batch of data.
-        actions = np.empty((batch_sz,), dtype=np.int32)
-        rewards, dones, values = np.empty((3, batch_sz))
-        observations = np.empty((batch_sz,) + env.observation_space.shape)
+        actions = np.empty((max_steps,), dtype=np.int32)
+        rewards, dones, values = np.empty((3, max_steps))
+        observations = np.empty((max_steps,) + env.observation_space.shape)
 
         # Training loop: collect samples, send to optimizer, repeat updates times.
         ep_rewards = [0.0]
         next_obs = env.reset()
         for update in range(updates):
-            for step in range(batch_sz):
+            for step in range(max_steps):
                 observations[step] = next_obs.copy()
-                actions[step], values[step] = self.model.action_value(next_obs[None, :])
+                actions[step], values[step] = model.action_value(next_obs[None, :])
                 next_obs, rewards[step], dones[step], _ = env.step(actions[step])
 
                 ep_rewards[-1] += rewards[step]
@@ -63,15 +64,18 @@ class A2CAgent:
                     ep_rewards.append(0.0)
                     next_obs = env.reset()
 
-            _, next_value = self.model.action_value(next_obs[None, :])
+            _, next_value = model.action_value(next_obs[None, :])
 
             returns, advs = self._returns_advantages(rewards, dones, values, next_value)
             # A trick to input actions and advantages through same API.
             acts_and_advs = np.concatenate([actions[:, None], advs[:, None]], axis=-1)
 
+            if model.input_size > 1:
+                print('bigger')
+
             # Performs a full training step on the collected batch.
             # Note: no need to mess around with gradients, Keras API handles it.
-            losses = self.model.train_on_batch(observations, [acts_and_advs, returns])
+            losses = model.train_on_batch(observations, [acts_and_advs, returns])
 
         return ep_rewards
 

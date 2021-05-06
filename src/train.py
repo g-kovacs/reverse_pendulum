@@ -1,15 +1,15 @@
 from matplotlib import pyplot as plt
 
 from DCPEnv import DCPEnv
-from SimpleModel import SimpleModel
+from models import SimpleModel
 from agent import A2CAgent
 
 
 def run():
     env = DCPEnv()
     model = SimpleModel(num_actions=env.action_space.n)
-    agent = A2CAgent(model)
-    rewards_history = agent.train(env, 32, 128)
+    agent = A2CAgent()
+    rewards_history = agent.train(env, model, 32, 128)
     plt.plot(rewards_history)
     plt.show()
     print("Finished training, testing...")

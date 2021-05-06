@@ -1,5 +1,5 @@
 from DCPEnv import DCPEnv
-from SimpleModel import SimpleModel
+from models import SimpleModel
 
 def main():
     env = DCPEnv()
