@@ -89,7 +89,7 @@ class DCPEnv(gym.Env):
                              self.action_space.n)[action]
 
         if np.random.random() < 1e-3:
-            self.state.wind_blow(np.random.choice([-self.maxT * 5, self.maxT * 5]))
+            self.state.wind_blow(np.random.choice([-self.maxT * 10, self.maxT * 10]))
 
         self.state.add_torque(torque)
 
@@ -101,6 +101,16 @@ class DCPEnv(gym.Env):
     def reset(self):
         self.state = DCPEnv.State(p_dG=0.01)
         return np.array(dt_replace(self.state).flatten())
+
+    def test(self, model, render=True):
+        obs, done, ep_reward = self.reset(), False, 0
+        while not done:
+            if render:
+                self.render()
+            action, _ = model.action_value(obs[None, :])
+            obs, reward, done, _ = self.step(action)
+            ep_reward += reward
+        return ep_reward
 
     def render(self, mode='human'):
         screen_w = 600
