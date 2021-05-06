@@ -1,10 +1,10 @@
 from DCPEnv import DCPEnv
-from SimpleModel import SimpleModel
+from models import CNNModel
 
 def main():
     env = DCPEnv()
-    model = SimpleModel(num_actions=env.action_space.n)
-    model.load_weights('saves/simpleModel_1.0').expect_partial()
+    model = CNNModel(num_actions=env.action_space.n)
+    model.load_weights(f'saves/{model.label}')
     for i in range(4):
         print("Alive for %.1f seconds" % (env.test(model, True) / 10.0))
     env.close()
