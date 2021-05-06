@@ -11,6 +11,6 @@ if ($Ver = "OK") {
     pip install virtualenv
     python -m virtualenv .\..\env
     .\..\env\Scripts\Activate.ps1
-    pip install -r .\.\python_requirements.txt
+    pip install -r .\..\python_requirements.txt
     deactivate
 }
