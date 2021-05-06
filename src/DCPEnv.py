@@ -108,7 +108,7 @@ class DCPEnv(gym.Env):
         return np.array(dt_replace(self.state).flatten()), 1.0, terminate, {"action": action}
 
     def reset(self):
-        self.state = DCPEnv.State(p_dG=0.01, c_X=2)
+        self.state = DCPEnv.State(p_dG=0.01)
         return np.array(dt_replace(self.state).flatten())
 
     def test(self, model, render=True):
