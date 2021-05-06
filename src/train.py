@@ -4,6 +4,7 @@ from SimpleModel import SimpleModel
 from agent import A2CAgent
 import sys, getopt
 from os import environ
+from timeit import default_timer as timer
 
 helpMSG = """
 train.py usage
@@ -15,14 +16,17 @@ def run():
     env = DCPEnv()
     model = SimpleModel(num_actions=env.action_space.n)
     agent = A2CAgent(model)
+    starttime = timer()
     rewards_history = agent.train(env, 32, 128)
-    plt.plot(rewards_history)
+    dt = timer() - starttime
+    print("Finished training in %.2f seconds.", dt)
     plt.ion()
-    plt.show()
-    print("Finished training, testing...")
+    plt.plot(rewards_history)
+    plt.draw()
     print(f'Test result: {env.test(model, False) / 10.0}')
     model.save_weights('saves/simpleModel_1.0')
-    input("Press Enter to end session...")
+    plt.ioff()
+    plt.show()
 
 def main(argv):
     environ['CUDA_VISIBLE_DEVICES'] = '-1'
