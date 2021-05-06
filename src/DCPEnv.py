@@ -108,8 +108,6 @@ class DCPEnv(gym.Env):
         return np.array(dt_replace(self.state).flatten()), 1.0, terminate, {"action": action}
 
     def reset(self):
-        if self.viewer is None:
-            self._init_renderer()
         self.state = DCPEnv.State(p_dG=0.01, c_X=2)
         return np.array(dt_replace(self.state).flatten())
 
@@ -118,22 +116,17 @@ class DCPEnv(gym.Env):
         while not done:
             if render:
                 self.render()
-            action, _ = model.action_value(obs[None, :], False)
+            action, _ = model.action_value(obs[None, :])
             obs, reward, done, _ = self.step(action)
             ep_reward += reward
         return ep_reward
 
     def render(self, mode='human'):
         if self.viewer is None:
-            return None
-            #self._pole_geom = pole
+            self._init_renderer()
 
         if self.state is None:
             return None
-
-        # pole = self._pole_geom
-        # l, r, t, b = -pole_w / 2, pole_w / 2, polelen, 0
-        # pole.v = [(l, b), (l, t), (r, t), (r, b)]
 
         return self.viewer.render_cars([self.state])
 
@@ -148,6 +141,7 @@ def preview():
     env.reset()
     env.render()
     input("")
+    env.close()
 
 
 if __name__ == "__main__":

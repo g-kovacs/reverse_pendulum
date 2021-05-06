@@ -105,8 +105,10 @@ class CarRenderer(rendering.Viewer):
 
         self.render(return_rgb_array=False)
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     render_data = {"wW": 6 * 2, "pW": 0.48 / 2.4,
                                 "pL": 2.4, "cW": 2, "wR": 0.2}
     r = CarRenderer(data_dict=render_data)
     r.add_car(CarRenderer.Colors.BLUE)
+    input("")
