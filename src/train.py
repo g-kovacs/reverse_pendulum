@@ -20,7 +20,7 @@ def run():
     models.append(CNNModel(num_actions=env.action_space.n))
     agent = A2CAgent()
     for model in models:
-    	starttime = timer()
+        starttime = timer()
         rewards_history = agent.train(env, model, 128, 500)
         dt = timer() - starttime
         plt.plot(rewards_history, label = model.label)
@@ -31,7 +31,7 @@ def run():
     for model in models:
         print(f'Test result of {model.label}: {env.test(model, False) / 10.0}')
         model.save_weights(f'saves/{model.label}')
-	plt.show()
+    plt.show()
 
 def main(argv):
     environ['CUDA_VISIBLE_DEVICES'] = '-1'
