@@ -1,9 +1,8 @@
 from matplotlib import pyplot as plt
 from DCPEnv import DCPEnv
-from models import SimpleAC, SimpleAC2, CNNModel
+import models as m
 from agent import A2CAgent
-import sys
-import getopt
+import sys, getopt
 from os import environ
 from timeit import default_timer as timer
 
@@ -17,13 +16,14 @@ train.py usage
 def run():
     env = DCPEnv()
     models = []
-    models.append(SimpleAC(num_actions=env.action_space.n))
-    models.append(SimpleAC2(num_actions=env.action_space.n))
-    models.append(CNNModel(num_actions=env.action_space.n))
+    #models.append(m.SimpleAC(num_actions=env.action_space.n))
+    #models.append(m.SimpleAC2(num_actions=env.action_space.n))
+    models.append(m.CNNModel(num_actions=env.action_space.n))
+    models.append(m.LSTMModel(num_actions=env.action_space.n))
     agent = A2CAgent()
     for model in models:
         starttime = timer()
-        rewards_history = agent.train(env, model, 128, 500)
+        rewards_history = agent.train(env, model, 128, 250)
         dt = timer() - starttime
         plt.plot(rewards_history, label=model.label)
         print(f'Finished training {model.label} in {int(dt)} seconds')

@@ -50,16 +50,16 @@ class A2CAgent:
             # shift obs into sliding window
             for _ in range(window_step):
                 i += 1
-                np.roll(obs_buffer,-1)
-                obs_buffer[-1] = input[i]
-                if stops[i-1]:
+                np.roll(obs_buffer,-1)#                                        !!!!!!!!!
+                obs_buffer[-1] = input[i]#                                     !!!!!!!!!
+                if stops[i-1]:  #ERROR ========================================!!!!!!!!!
                     obs_buffer = np.array([input[i] for _ in range(window_size)])
             # add window to training data
             windows[window] = obs_buffer.copy()
             indices[window] = i
         return windows, indices
 
-    def train(self, env, model, max_steps=128, updates=500, window_step=3):
+    def train(self, env, model, batch_size=128, updates=500, window_step=1):
         model.compile(
             optimizer=ko.RMSprop(lr=self.lr),
             # Define separate losses for policy logits and value estimate.
@@ -67,16 +67,16 @@ class A2CAgent:
 
 
         # Storage helpers for a single batch of data.
-        actions = np.empty((max_steps,), dtype=np.int32)
-        rewards, dones, values = np.empty((3, max_steps))
-        observations = np.empty((max_steps,) + env.observation_space.shape)
+        actions = np.empty((batch_size,), dtype=np.int32)
+        rewards, dones, values = np.empty((3, batch_size))
+        observations = np.empty((batch_size,) + env.observation_space.shape)
 
         # Training loop: collect samples, send to optimizer, repeat updates times.
         ep_rewards = [0.0]
         next_obs = env.reset()
         model.reset_buffer(next_obs)
-        for update in range(updates):
-            for step in range(max_steps):
+        for _ in range(updates):
+            for step in range(batch_size):
                 observations[step] = next_obs.copy()
                 actions[step], values[step] = model.action_value(next_obs[None, :], False)
                 next_obs, rewards[step], dones[step], _ = env.step(actions[step])

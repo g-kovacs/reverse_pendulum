@@ -29,9 +29,9 @@ class BaseModel(tf.keras.Model):
         return np.squeeze(action, axis=-1), np.squeeze(value, axis=-1)
 
 class CNNModel(BaseModel):
-    def __init__(self, num_actions):
-        super().__init__('CNNModel', 8)
-        self.cnn = kl.Conv1D(filters=2, kernel_size=4, padding="same")
+    def __init__(self, num_actions, memory_size=8):
+        super().__init__('CNNModel', memory_size)
+        self.cnn = kl.Conv1D(filters=2, kernel_size=4)
         self.norm = kl.BatchNormalization()
         self.activation = kl.ReLU()
         self.flatten = kl.Flatten()
@@ -44,10 +44,29 @@ class CNNModel(BaseModel):
     def call(self, inputs, **kwargs):
         x = tf.convert_to_tensor(inputs)
         # Decoder
-        x = self.cnn(x)
-        x = self.norm(x)
-        x = self.activation(x)
-        features = self.flatten(x)
+        cnn = self.cnn(x)
+        norm = self.norm(cnn)
+        act = self.activation(norm)
+        features = self.flatten(act)
+        # Actor-Critic
+        hidden_logits = self.actor(features)
+        hidden_values = self.critic(features)
+        return self.logits(hidden_logits), self.value(hidden_values)
+
+class LSTMModel(BaseModel):
+    def __init__(self, num_actions,memory_size=8):
+        super().__init__('LSTMModel', memory_size)
+        self.lstm = kl.LSTM(64)
+        self.actor = kl.Dense(32, activation='relu', kernel_initializer='he_normal')
+        self.critic = kl.Dense(32, activation='relu', kernel_initializer='he_normal')
+
+        self.value = kl.Dense(1, name='value')
+        self.logits = kl.Dense(num_actions, name='policy_logits')
+
+    def call(self, inputs, **kwargs):
+        x = tf.convert_to_tensor(inputs)
+        # Decoder
+        features = self.lstm(x)
         # Actor-Critic
         hidden_logits = self.actor(features)
         hidden_values = self.critic(features)
