@@ -30,8 +30,8 @@ class BaseModel(tf.keras.Model):
 
 class CNNModel(BaseModel):
     def __init__(self, num_actions):
-        super().__init__('CNNModel', 4)
-        self.cnn = kl.Conv1D(filters=4, kernel_size=2, padding="same")
+        super().__init__('CNNModel', 8)
+        self.cnn = kl.Conv1D(filters=2, kernel_size=4, padding="same")
         self.norm = kl.BatchNormalization()
         self.activation = kl.ReLU()
         self.flatten = kl.Flatten()

@@ -12,7 +12,7 @@ def run():
     models.append(CNNModel(num_actions=env.action_space.n))
     agent = A2CAgent()
     for model in models:
-        rewards_history = agent.train(env, model, 64, 256)
+        rewards_history = agent.train(env, model, 128, 500)
         plt.plot(rewards_history, label = model.label)
         print(f'Finished training, {model.label}')
     plt.legend()
