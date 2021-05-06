@@ -38,7 +38,29 @@ class A2CAgent:
         # Here signs are flipped because the optimizer minimizes.
         return policy_loss - self.entropy_c * entropy_loss
 
-    def train(self, env, model, max_steps=128, updates=500):
+    def _get_windows(self, window_size, window_step, input, stops):
+        #initial sequence of the same states
+        obs_buffer = np.array([input[0] for _ in range(window_size)])
+        window_num = (input.shape[0]-1)//window_step + 1
+        windows = np.empty((window_num, window_size))
+        indices = np.empty(window_num)
+        windows[0] = obs_buffer.copy()
+        indices[0] = 0
+        i = 0
+        for window in range(window_num-1):
+            # shift obs into sliding window
+            for _ in range(window_step):
+                i += 1
+                np.roll(obs_buffer,-1)
+                obs_buffer[-1] = input[i]
+                if stops[i-1]:
+                    obs_buffer = np.array([input[i] for _ in range(window_size)])
+            # add window to training data
+            windows[window] = obs_buffer.copy()
+            indices[window] = i
+        return windows, indices
+
+    def train(self, env, model, max_steps=128, updates=500, window_step=3):
         model.compile(
             optimizer=ko.RMSprop(lr=self.lr),
             # Define separate losses for policy logits and value estimate.
@@ -54,24 +76,32 @@ class A2CAgent:
         ep_rewards = [0.0]
         next_obs = env.reset()
         for update in range(updates):
+            model.reset(next_obs)
             for step in range(max_steps):
                 observations[step] = next_obs.copy()
-                actions[step], values[step] = model.action_value(next_obs[None, :])
+                actions[step], values[step] = model.action_value(next_obs[None, :], False)
                 next_obs, rewards[step], dones[step], _ = env.step(actions[step])
-
                 ep_rewards[-1] += rewards[step]
                 if dones[step]:
                     ep_rewards.append(0.0)
                     next_obs = env.reset()
+                    model.reset_buffer(next_obs)
 
-            _, next_value = model.action_value(next_obs[None, :])
+            _, next_value = model.action_value(next_obs[None, :], False)
 
             returns, advs = self._returns_advantages(rewards, dones, values, next_value)
             # A trick to input actions and advantages through same API.
             acts_and_advs = np.concatenate([actions[:, None], advs[:, None]], axis=-1)
 
-            if model.input_size > 1:
-                print('bigger')
+            # windowing
+            if model.window_size > 1:
+                observations, window_indices = self._get_windows( \
+                    model.window_size,
+                    window_step,
+                    observations,
+                    dones)
+                acts_and_advs = acts_and_advs[[window_indices]]
+                returns = returns[[window_indices]]
 
             # Performs a full training step on the collected batch.
             # Note: no need to mess around with gradients, Keras API handles it.
