@@ -40,6 +40,9 @@ class DCPEnv(gym.Env):
 
         def wind_blow(self, torque):
             self.p_dG += torque / DCPEnv.p_I * DCPEnv.dt
+        
+        def hit(self, force):
+            self.c_dX += force / DCPEnv.mC * DCPEnv.dt
 
         def add_torque(self, torque):
             F = (2.0*torque - DCPEnv.coefR *
@@ -92,14 +95,15 @@ class DCPEnv(gym.Env):
         self.viewer = CarRenderer(data_dict=self.render_data)
         self.viewer.add_car(CarRenderer.Colors.BLUE)
     
+    # ==================================================
+    # =================== STEP =========================
     def step(self, action):
         torque = np.linspace(-self.maxT, self.maxT,
                              self.action_space.n)[action]
 
-        if np.random.random() < 1e-3:
-            self.state.wind_blow(np.random.choice(
-                [-self.maxT * 10, self.maxT * 10]))
-
+        if np.random.random() < 1e-4:
+           self.state.hit(np.random.choice([-0.01, 0.01]))
+            #self.state.c_dX *= -1
         self.state.add_torque(torque)
 
         terminate = False
