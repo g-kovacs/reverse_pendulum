@@ -1,6 +1,6 @@
 from matplotlib import pyplot as plt
 from DCPEnv import DCPEnv
-from SimpleModel import SimpleModel
+from models import SimpleAC, SimpleAC2, CNNModel
 from agent import A2CAgent
 import sys, getopt
 from os import environ
@@ -14,20 +14,24 @@ train.py usage
 
 def run():
     env = DCPEnv()
-    model = SimpleModel(num_actions=env.action_space.n)
-    agent = A2CAgent(model)
-    starttime = timer()
-    rewards_history = agent.train(env, 256, 500)
-    dt = timer() - starttime
-    print("Finished training in %.2f seconds.", dt)
-    plt.ion()
-    plt.plot(rewards_history)
+    models = []
+    models.append(SimpleAC(num_actions=env.action_space.n))
+    models.append(SimpleAC2(num_actions=env.action_space.n))
+    models.append(CNNModel(num_actions=env.action_space.n))
+    agent = A2CAgent()
+    for model in models:
+    	starttime = timer()
+        rewards_history = agent.train(env, model, 128, 500)
+        dt = timer() - starttime
+        plt.plot(rewards_history, label = model.label)
+        print(f'Finished training {model.label} in {int(dt)} seconds')
+    plt.legend()
     plt.draw()
-    print(f'Test result: {env.test(model, False) / 10.0}')
-    env.close()
-    model.save_weights('saves/simpleModel_1.0')
-    plt.ioff()
-    plt.show()
+    print("Finished training, testing...")
+    for model in models:
+        print(f'Test result of {model.label}: {env.test(model, False) / 10.0}')
+        model.save_weights(f'saves/{model.label}')
+	plt.show()
 
 def main(argv):
     environ['CUDA_VISIBLE_DEVICES'] = '-1'

@@ -113,10 +113,11 @@ class DCPEnv(gym.Env):
 
     def test(self, model, render=True):
         obs, done, ep_reward = self.reset(), False, 0
+        model.reset_buffer(obs)
         while not done:
             if render:
                 self.render()
-            action, _ = model.action_value(obs[None, :])
+            action, _ = model.action_value(obs[None, :], False)
             obs, reward, done, _ = self.step(action)
             ep_reward += reward
         return ep_reward
