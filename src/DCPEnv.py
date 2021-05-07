@@ -116,12 +116,12 @@ class DCPEnv(gym.Env):
                              self.action_space.n)[action]
 
         if np.random.random() < 1e-4:
-            self.state.hit(np.random.choice([-0.01, 0.01]))
+            self.states[0].hit(np.random.choice([-0.01, 0.01]))
             #self.state.c_dX *= -1
-        self.state.add_torque(torque)
+        self.states[0].add_torque(torque)
 
         terminate = False
-        if np.abs(self.state.p_G) > self.maxG or np.abs(self.state.c_X) > self.maxX:
+        if np.abs(self.states[0].p_G) > self.maxG or np.abs(self.states[0].c_X) > self.maxX:
             terminate = True
         return np.array(self._convert_states()), 1.0, terminate, {"action": action}
 
@@ -129,8 +129,6 @@ class DCPEnv(gym.Env):
     # =================== RESET ========================
     # ========== initialize cars here ==================
     def reset(self):
-        if self.viewer is None:
-            self.viewer = self._init_renderer()
         self.states = [DCPEnv.State(
             c_X=DCPEnv.carDist*(1-self.numCars+2*i)/2).noise()
             for i in range(self.numCars)]
@@ -147,9 +145,9 @@ class DCPEnv(gym.Env):
             ep_reward += reward
         return ep_reward
 
-    def render(self, mode='human'):
+    def render(self):
         if self.viewer is None:
-            return None
+            self.viewer = self._init_renderer()
 
         if self.states is None:
             return None
