@@ -38,53 +38,43 @@ class A2CAgent:
         # Here signs are flipped because the optimizer minimizes.
         return policy_loss - self.entropy_c * entropy_loss
 
-    def _get_windows(self, window_size, window_step, input, stops):
-        #initial sequence of the same states
-        obs_buffer = np.array([input[0] for _ in range(window_size)])
-        window_num = (input.shape[0]-1)//window_step + 1
-        windows = np.empty((window_num, window_size, input.shape[1]))
-        indices = [0]*window_num
-        windows[0] = obs_buffer.copy()
-        i = 0
-        for window in range(window_num-1):
-            # shift obs into sliding window
-            for _ in range(window_step):
-                i += 1
-                np.roll(obs_buffer,-1)#                                        !!!!!!!!!
-                obs_buffer[-1] = input[i]#                                     !!!!!!!!!
-                if stops[i-1]:  #ERROR ========================================!!!!!!!!!
-                    obs_buffer = np.array([input[i] for _ in range(window_size)])
-            # add window to training data
-            windows[window] = obs_buffer.copy()
-            indices[window] = i
-        return windows, indices
-
-    def train(self, env, model, batch_size=128, updates=500, window_step=1):
+    def train(self, env, model, batch_size=128, updates=500):
         model.compile(
             optimizer=ko.RMSprop(lr=self.lr),
             # Define separate losses for policy logits and value estimate.
             loss=[self._logits_loss, self._value_loss])
-
-
+        
         # Storage helpers for a single batch of data.
         actions = np.empty((batch_size,), dtype=np.int32)
         rewards, dones, values = np.empty((3, batch_size))
-        observations = np.empty((batch_size,) + env.observation_space.shape)
+        if model.window_size > 1:
+            observations = np.empty((batch_size, model.window_size) + env.observation_space.shape)
+        else:
+            observations = np.empty((batch_size,) + env.observation_space.shape)
 
         # Training loop: collect samples, send to optimizer, repeat updates times.
         ep_rewards = [0.0]
         next_obs = env.reset()
+        if model.window_size > 1:
+            window = np.array([next_obs]*model.window_size)
         model.reset_buffer(next_obs)
         for _ in range(updates):
             for step in range(batch_size):
-                observations[step] = next_obs.copy()
+                if model.window_size > 1:
+                    window = np.roll(window,-1)
+                    window[-1] = next_obs
+                    observations[step] = window
+                else:
+                    observations[step] = next_obs
                 actions[step], values[step] = model.action_value(next_obs[None, :], False)
                 next_obs, rewards[step], dones[step], _ = env.step(actions[step])
                 ep_rewards[-1] += rewards[step]
                 if dones[step]:
                     ep_rewards.append(0.0)
                     next_obs = env.reset()
-                    model.reset_buffer(next_obs)
+                    if model.window_size > 1:
+                        window = np.array([next_obs]*model.window_size)
+                        model.reset_buffer(next_obs)
 
             _, next_value = model.action_value(next_obs[None, :], False)
 
@@ -92,17 +82,7 @@ class A2CAgent:
             # A trick to input actions and advantages through same API.
             acts_and_advs = np.concatenate([actions[:, None], advs[:, None]], axis=-1)
 
-            # windowing
-            if model.window_size > 1:
-                obs, window_indices = self._get_windows( \
-                    model.window_size,
-                    window_step,
-                    observations,
-                    dones)
-                model.train_on_batch(obs, [acts_and_advs[window_indices], returns[window_indices]])
-            else:
-                model.train_on_batch(observations, [acts_and_advs, returns])
-
+            model.train_on_batch(observations, [acts_and_advs, returns])
         return ep_rewards
 
     def _returns_advantages(self, rewards, dones, values, next_value):

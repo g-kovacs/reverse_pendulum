@@ -18,12 +18,12 @@ def run():
     models = []
     #models.append(m.SimpleAC(num_actions=env.action_space.n))
     #models.append(m.SimpleAC2(num_actions=env.action_space.n))
-    models.append(m.CNNModel(num_actions=env.action_space.n))
+    #models.append(m.CNNModel(num_actions=env.action_space.n))
     models.append(m.LSTMModel(num_actions=env.action_space.n))
     agent = A2CAgent()
     for model in models:
         starttime = timer()
-        rewards_history = agent.train(env, model, 128, 250)
+        rewards_history = agent.train(env, model, 128, 128)
         dt = timer() - starttime
         plt.plot(rewards_history, label=model.label)
         print(f'Finished training {model.label} in {int(dt)} seconds')
