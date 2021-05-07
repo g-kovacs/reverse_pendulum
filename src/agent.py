@@ -37,19 +37,21 @@ class A2CAgent:
         # Here signs are flipped because the optimizer minimizes.
         return policy_loss - self.entropy_c * entropy_loss
 
-    def train(self, env, model, batch_size=128, updates=500):
-        model.compile(
-            optimizer=ko.RMSprop(lr=self.lr),
-            # Define separate losses for policy logits and value estimate.
-            loss=[self._logits_loss, self._value_loss])
+    def train(self, env, models, batch_size=128, updates=500):
+        for model in models:
+            model.compile(
+                optimizer=ko.RMSprop(lr=self.lr),
+                # Define separate losses for policy logits and value estimate.
+                loss=[self._logits_loss, self._value_loss])
         
         # Storage helpers for a single batch of data.
         actions = np.empty((batch_size,), dtype=np.int32)
         rewards, dones, values = np.empty((3, batch_size))
-        if model.window_size > 1:
-            observations = np.empty((batch_size, model.window_size) + env.observation_space.shape)
-        else:
-            observations = np.empty((batch_size,) + env.observation_space.shape)
+        max_window_size = 0
+        for model in models:
+            if(max_window_size < model.window_size):
+                max_window_size = model.window_size
+        observations = np.empty((batch_size, max_window_size) + env.observation_space.shape)
 
         # Training loop: collect samples, send to optimizer, repeat updates times.
         ep_rewards = []
