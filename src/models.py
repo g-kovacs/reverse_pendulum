@@ -20,7 +20,7 @@ class BaseModel(tf.keras.Model):
         # If called for prediction on
         # subsequent observations
         if not training and self.window_size > 1:
-            self.buffer = np.roll(self.buffer,-1)
+            self.buffer = np.roll(self.buffer,-1,axis=0)
             self.buffer[-1] = obs[0]
             obs = self.buffer[None,:]
         logits, value = self.predict_on_batch(obs)

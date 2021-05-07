@@ -55,25 +55,20 @@ class A2CAgent:
         # Training loop: collect samples, send to optimizer, repeat updates times.
         ep_rewards = [0.0]
         next_obs = env.reset()
-        if model.window_size > 1:
-            window = np.array([next_obs]*model.window_size)
         model.reset_buffer(next_obs)
         for _ in range(updates):
             for step in range(batch_size):
+                actions[step], values[step] = model.action_value(next_obs[None, :], False)
                 if model.window_size > 1:
-                    window = np.roll(window,-1)
-                    window[-1] = next_obs
-                    observations[step] = window
+                    observations[step] = model.buffer
                 else:
                     observations[step] = next_obs
-                actions[step], values[step] = model.action_value(next_obs[None, :], False)
                 next_obs, rewards[step], dones[step], _ = env.step(actions[step])
                 ep_rewards[-1] += rewards[step]
                 if dones[step]:
                     ep_rewards.append(0.0)
                     next_obs = env.reset()
                     if model.window_size > 1:
-                        window = np.array([next_obs]*model.window_size)
                         model.reset_buffer(next_obs)
 
             _, next_value = model.action_value(next_obs[None, :], False)
