@@ -14,13 +14,13 @@ class BaseModel(tf.keras.Model):
         self.dist = ProbabilityDistribution()
     
     def reset_buffer(self, initial_obs):
-        self.buffer = np.array([initial_obs.copy() for _ in range(self.window_size)])
+        self.buffer = np.array([initial_obs]*self.window_size)
 
     def action_value(self, obs, training = True):
         # If called for prediction on
         # subsequent observations
         if not training and self.window_size > 1:
-            np.roll(self.buffer,-1)
+            self.buffer = np.roll(self.buffer,-1,axis=0)
             self.buffer[-1] = obs[0]
             obs = self.buffer[None,:]
         logits, value = self.predict_on_batch(obs)
