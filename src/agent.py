@@ -2,9 +2,10 @@ import tensorflow as tf
 import tensorflow.keras.losses as kls
 import tensorflow.keras.optimizers as ko
 import numpy as np
+import collections
 
 class A2CAgent:
-    def __init__(self, lr=7e-3, gamma=0.5, value_c=0.5, entropy_c=1e-3):
+    def __init__(self, lr=7e-3, gamma=0.9, value_c=0.5, entropy_c=1e-4):
         # `gamma` is the discount factor
         self.gamma = gamma
         # Coefficients are used for the loss terms.
@@ -38,14 +39,16 @@ class A2CAgent:
         return policy_loss - self.entropy_c * entropy_loss
 
     def train(self, env, models, batch_size=128, updates=500):
+        if not isinstance(models, (collections.Sequence, np.ndarray)):
+            models = np.array(models)
         for model in models:
             model.compile(
                 optimizer=ko.RMSprop(lr=self.lr),
                 # Define separate losses for policy logits and value estimate.
                 loss=[self._logits_loss, self._value_loss])
-        
+        model_num = models.shape[0]
         # Storage helpers for a single batch of data.
-        actions = np.empty((batch_size,), dtype=np.int32)
+        actions = np.empty((model_num, batch_size), dtype=np.int32)
         rewards, dones, values = np.empty((3, batch_size))
         max_window_size = 0
         for model in models:

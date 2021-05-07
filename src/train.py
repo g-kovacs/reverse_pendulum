@@ -23,7 +23,7 @@ def run():
     agent = A2CAgent()
     for model in models:
         starttime = timer()
-        rewards_history = agent.train(env, model, 128, 500)
+        rewards_history = agent.train(env, model, 128, 50)
         dt = timer() - starttime
         plt.plot(rewards_history, label=model.label)
         print(f'Finished training {model.label} in {int(dt)} seconds')
