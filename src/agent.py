@@ -3,9 +3,8 @@ import tensorflow.keras.losses as kls
 import tensorflow.keras.optimizers as ko
 import numpy as np
 
-
 class A2CAgent:
-    def __init__(self, lr=7e-3, gamma=0.99, value_c=0.5, entropy_c=1e-4):
+    def __init__(self, lr=7e-3, gamma=0.5, value_c=0.5, entropy_c=1e-3):
         # `gamma` is the discount factor
         self.gamma = gamma
         # Coefficients are used for the loss terms.
@@ -53,9 +52,10 @@ class A2CAgent:
             observations = np.empty((batch_size,) + env.observation_space.shape)
 
         # Training loop: collect samples, send to optimizer, repeat updates times.
-        ep_rewards = [0.0]
+        ep_rewards = []
         next_obs = env.reset()
         model.reset_buffer(next_obs)
+        next_reward = 0.0
         for _ in range(updates):
             for step in range(batch_size):
                 actions[step], values[step] = model.action_value(next_obs[None, :], False)
@@ -64,9 +64,10 @@ class A2CAgent:
                 else:
                     observations[step] = next_obs
                 next_obs, rewards[step], dones[step], _ = env.step(actions[step])
-                ep_rewards[-1] += rewards[step]
+                next_reward += rewards[step]
                 if dones[step]:
-                    ep_rewards.append(0.0)
+                    ep_rewards.append(next_reward)
+                    next_reward = 0
                     next_obs = env.reset()
                     if model.window_size > 1:
                         model.reset_buffer(next_obs)

@@ -56,9 +56,9 @@ class CNNModel(BaseModel):
 class LSTMModel(BaseModel):
     def __init__(self, num_actions,memory_size=8):
         super().__init__('LSTMModel', memory_size)
-        self.lstm = kl.LSTM(64)
-        self.actor = kl.Dense(32, activation='relu', kernel_initializer='he_normal')
-        self.critic = kl.Dense(32, activation='relu', kernel_initializer='he_normal')
+        self.lstm = kl.LSTM(16)
+        self.actor = kl.Dense(64, activation='relu', kernel_initializer='he_normal')
+        self.critic = kl.Dense(64, activation='relu', kernel_initializer='he_normal')
 
         self.value = kl.Dense(1, name='value')
         self.logits = kl.Dense(num_actions, name='policy_logits')
