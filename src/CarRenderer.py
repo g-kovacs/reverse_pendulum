@@ -1,8 +1,9 @@
 from gym.envs.classic_control import rendering
 from dataclasses import dataclass
+from numpy.random import uniform
 
 
-@dataclass(init=False, order=False)
+@dataclass(init=False)
 class Color:
     car: tuple
     wheel: tuple
@@ -18,7 +19,10 @@ class CarRenderer(rendering.Viewer):
     @dataclass
     class Colors:
         BLUE: Color = Color((.3, .3, 1, ), (0, .9, .4))
-        RED: Color = Color((1, .3, .3), (.4, .9, 0))
+        RED: Color = Color((1, .3, .3), (.88, .29, .76))
+
+        def RANDOM():
+            return Color(uniform(size=3), uniform(size=3))
 
     def __init__(self, s_width=600, s_height=400, data_dict={}):
         self.dims = data_dict
@@ -79,7 +83,9 @@ class CarRenderer(rendering.Viewer):
             axle.add_attr(t)
         self.add_geom(axle)
 
-    def add_car(self, color):
+    def add_car(self, color=None):
+        if color is None:
+            color = CarRenderer.Colors.RANDOM()
         car = []
         car.append(self._genCar(color.car))
         car.append(self._genPole(color.pole, car[0]))
