@@ -52,7 +52,7 @@ class A2CAgent:
         for model in models:
             if(max_window_size < model.window_size):
                 max_window_size = model.window_size
-        observations = np.empty((batch_size, max_window_size) + env.observation_space.shape)
+        observations = np.empty((batch_size, max_window_size) + env.observations_size)
 
         # Training loop: collect samples, send to optimizer, repeat updates times.
         deaths = {}

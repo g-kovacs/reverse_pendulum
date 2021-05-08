@@ -1,13 +1,13 @@
 import gym
-from gym import spaces
 from dataclasses import dataclass, astuple
 import numpy as np
 from CarRenderer import CarRenderer
 import imageio
+import collections
 
 
 class DCPEnv(gym.Env):
-    action_num = 7
+
     # Boundaries
     carDist = 4
     maxG = 1
@@ -75,23 +75,14 @@ class DCPEnv(gym.Env):
             self.p_G += DCPEnv.dt * self.p_dG
 
     @property
-    def action_space(self):
-        return self._action_space
-
-    @property
-    def observation_space(self):
-        return self._observation_space
+    def observations_size(self):
+        return self.observations_size
+    
+    actions_size = 7
 
     def __init__(self, numCars=1, timeStep=0.1, buffer_size=1):
-        self._action_space = spaces.Discrete(DCPEnv.action_num * numCars)
         DCPEnv.maxX = (1 + numCars) / 2 * DCPEnv.carDist
-        boundary = np.array([self.maxG,
-                             np.finfo(np.float32).max,
-                             self.maxX,
-                             np.finfo(np.float32).max] * numCars,
-                            dtype=np.float32)
-        self._observation_space = spaces.Box(-boundary,
-                                             boundary, dtype=np.float32)
+        self.observations_size = len(DCPEnv.State.__dict__) * numCars
         DCPEnv.dt = timeStep
         self.viewer = None
         self.render_data = {"wW": self.maxX * 2, "pW": self.mP / self.lenP,
@@ -132,7 +123,7 @@ class DCPEnv(gym.Env):
         terminates = [False] * self.numCars
         for state, action, i in zip(self.states, actions, range(self.numCars)):
             torque = np.linspace(-self.maxT, self.maxT,
-                                 self.action_space.n)[action]
+                                 self.actions_size)[action]
 
             if np.random.random() < 1e-4:
                 t = np.random.standard_normal() * 0.2
@@ -158,7 +149,9 @@ class DCPEnv(gym.Env):
         self.buffer = np.array([state]*self.buffer_size)
         return self.buffer
 
-    def test(self, model, render=True, gif_path=None):
+    def test(self, models, render=True, gif_path=None):
+        if not isinstance(models, (collections.Sequence, np.ndarray)):
+            models = np.array([models])
         obs_window, done, ep_reward = self.reset(), False, 0
         frames = []
         while not done:

@@ -1,6 +1,6 @@
 from matplotlib import pyplot as plt
 from DCPEnv import DCPEnv
-import models as m
+import Models as Models
 from agent import A2CAgent
 import sys, getopt
 from os import environ
@@ -15,13 +15,16 @@ train.py usage
 
 def run():
     models = []
-    models.append(m.SimpleAC2(num_actions=DCPEnv.action_num))
-    env = DCPEnv(numCars=len(models))
+    models.append(Models.SimpleAC2(num_actions=DCPEnv.action_num))
+    max_window = 1
+    for m in models:
+        if m.input_size > max_window:
+            max_window = m.input_size
+    env = DCPEnv(numCars=len(models), buffer_size=max_window)
     agent = A2CAgent()
-
     for model in models:
         starttime = timer()
-        rewards_history = agent.train(env, model, 64, 100)
+        rewards_history = agent.train(env, models, 64, 100)
         dt = timer() - starttime
         plt.plot(rewards_history, label=model.label)
         print(f'Finished training {model.label} in {int(dt)} seconds')
