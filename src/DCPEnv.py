@@ -106,28 +106,38 @@ class DCPEnv(gym.Env):
 
     def _convert_states(self):
         return np.array(sum((astuple(s) for s in self.states), tuple()))
-    
+
     def _save_gif(self, frames, path):
         size = frames[0].shape
         with imageio.get_writer(path, mode='I') as writer:
             for frame in frames:
                 writer.append_data(frame)
 
+    def _collision_detect(self, left, right):
+        if abs(left.c_X - right.c_X) < DCPEnv.car_width:
+            push = (left.c_X - right.c_X) * DCPEnv.dt / 2
+            left.c_X -= push
+            right.c_X += push
+            left.c_dX, right.c_dX = right.c_dX, left.c_dX
+
     # ==================================================
     # =================== STEP =========================
-    def step(self, action):
-        torque = np.linspace(-self.maxT, self.maxT,
-                             self.action_space.n)[action]
+    def step(self, actions):
+        terminates = [False] * self.numCars
+        for state, action, i in zip(self.states, actions, range(self.numCars)):
+            torque = np.linspace(-self.maxT, self.maxT,
+                                 self.action_space.n)[action]
 
-        if np.random.random() < 1e-4:
-            t = np.random.standard_normal() * 0.2
-            self.states[0].wind_blow(np.random.choice([-t, t]))
-        self.states[0].add_torque(torque)
+            if np.random.random() < 1e-4:
+                t = np.random.standard_normal() * 0.2
+                state.wind_blow(np.random.choice([-t, t]))
+            state.add_torque(torque)
 
-        terminate = False
-        if np.abs(self.states[0].p_G) > self.maxG or np.abs(self.states[0].c_X) > self.maxX:
-            terminate = True
-        return np.array(self._convert_states()), 1.0, terminate, {"action": action}
+            if np.abs(state.p_G) > self.maxG or np.abs(state.c_X) > self.maxX:
+                terminates[i] = True
+        for i in range(len(self.states) - 1):
+            self._collision_detect(self.states[i], self.states[i+1])
+        return np.array(self._convert_states()), (1.0,) * 4, terminates
 
     # ==================================================
     # =================== RESET ========================
@@ -148,7 +158,7 @@ class DCPEnv(gym.Env):
                     frames.append(self.render(mode='rgb_array'))
                 else:
                     self.render(mode='human')
-            action, _ = model.action_value(obs[None, :], False)
+            action, _ = model.action_value(obs, False)
             obs, reward, done, _ = self.step(action)
             ep_reward += reward
         if len(frames) > 0:
