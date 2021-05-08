@@ -3,6 +3,7 @@ from gym import spaces
 from dataclasses import dataclass, astuple
 import numpy as np
 from CarRenderer import CarRenderer
+import imageio
 
 
 class DCPEnv(gym.Env):
@@ -105,6 +106,12 @@ class DCPEnv(gym.Env):
 
     def _convert_states(self):
         return np.array(sum((astuple(s) for s in self.states), tuple()))
+    
+    def _save_gif(self, frames, path):
+        size = frames[0].shape
+        with imageio.get_writer(path, mode='I') as writer:
+            for frame in frames:
+                writer.append_data(frame)
 
     # ==================================================
     # =================== STEP =========================
@@ -131,25 +138,31 @@ class DCPEnv(gym.Env):
             for i in range(self.numCars)]
         return self._convert_states()
 
-    def test(self, model, render=True):
+    def test(self, model, render=True, gif_path=None):
         obs, done, ep_reward = self.reset(), False, 0
         model.reset_buffer(obs)
+        frames = []
         while not done:
             if render:
-                self.render()
+                if gif_path is not None:
+                    frames.append(self.render(mode='rgb_array'))
+                else:
+                    self.render(mode='human')
             action, _ = model.action_value(obs[None, :], False)
             obs, reward, done, _ = self.step(action)
             ep_reward += reward
+        if len(frames) > 0:
+            self._save_gif(frames, gif_path)
         return ep_reward
 
-    def render(self):
+    def render(self, mode):
         if self.viewer is None:
             self.viewer = self._init_renderer()
 
         if self.states is None:
             return None
 
-        return self.viewer.render_cars(self.states)
+        return self.viewer.render_cars(self.states, mode)
 
     def close(self):
         if self.viewer:
