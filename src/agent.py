@@ -5,7 +5,7 @@ import numpy as np
 import collections
 
 class A2CAgent:
-    def __init__(self, lr=7e-3, gamma=0.9, value_c=0.5, entropy_c=1e-4):
+    def __init__(self, lr=7e-3, gamma=0.999, value_c=0.5, entropy_c=1e-4):
         # `gamma` is the discount factor
         self.gamma = gamma
         # Coefficients are used for the loss terms.
@@ -40,7 +40,7 @@ class A2CAgent:
 
     def train(self, env, models, batch_size=128, updates=500):
         if not isinstance(models, (collections.Sequence, np.ndarray)):
-            models = np.array(models)
+            models = np.array([models])
         for model in models:
             model.compile(
                 optimizer=ko.RMSprop(lr=self.lr),
@@ -54,7 +54,8 @@ class A2CAgent:
         for model in models:
             if(max_window_size < model.window_size):
                 max_window_size = model.window_size
-        observations = np.empty((batch_size, max_window_size) + env.observation_space.shape)
+        model = models[0]    #TODO remove
+        observations = np.empty((batch_size, ) + env.observation_space.shape)
 
         # Training loop: collect samples, send to optimizer, repeat updates times.
         ep_rewards = []
@@ -63,7 +64,7 @@ class A2CAgent:
         next_reward = 0.0
         for _ in range(updates):
             for step in range(batch_size):
-                actions[step], values[step] = model.action_value(next_obs[None, :], False)
+                actions[step], values[step] = model.action_value(next_obs, False)
                 if model.window_size > 1:
                     observations[step] = model.buffer
                 else:
@@ -77,7 +78,7 @@ class A2CAgent:
                     if model.window_size > 1:
                         model.reset_buffer(next_obs)
 
-            _, next_value = model.action_value(next_obs[None, :], False)
+            _, next_value = model.action_value(next_obs, False)
 
             returns, advs = self._returns_advantages(rewards, dones, values, next_value)
             # A trick to input actions and advantages through same API.

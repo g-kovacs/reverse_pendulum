@@ -17,16 +17,23 @@ def run():
     env = DCPEnv()
     models = []
     #models.append(m.SimpleAC(num_actions=env.action_space.n))
-    models.append(m.SimpleAC2(num_actions=env.action_space.n))
+    models.append(m.SimpleAC2(num_actions=env.action_space.n,name='0.9'))
     #models.append(m.CNNModel(num_actions=env.action_space.n))
-    models.append(m.LSTMModel(num_actions=env.action_space.n,memory_size=32))
-    agent = A2CAgent()
+    #models.append(m.LSTMModel(num_actions=env.action_space.n,memory_size=4))
+    agent = A2CAgent(gamma=0.9)
     for model in models:
         starttime = timer()
-        rewards_history = agent.train(env, model, 128, 50)
+        rewards_history = agent.train(env, model, 32, 50)
         dt = timer() - starttime
         plt.plot(rewards_history, label=model.label)
         print(f'Finished training {model.label} in {int(dt)} seconds')
+    agent = A2CAgent(0.999)
+    models = []
+    #models.append(m.SimpleAC(num_actions=env.action_space.n))
+    models.append(m.SimpleAC2(num_actions=env.action_space.n,name='0.999'))
+    for model in models:
+        rewards_history = agent.train(env, model, 32, 50)
+        plt.plot(rewards_history, label=model.label)
     plt.legend()
     plt.draw()
     print("Finished training, testing...")

@@ -21,16 +21,16 @@ class BaseModel(tf.keras.Model):
         # subsequent observations
         if not training and self.window_size > 1:
             self.buffer = np.roll(self.buffer,-1,axis=0)
-            self.buffer[-1] = obs[0]
-            obs = self.buffer[None,:]
-        logits, value = self.predict_on_batch(obs)
+            self.buffer[-1] = obs
+            obs = self.buffer
+        logits, value = self.predict_on_batch(obs[None,:])
         action = self.dist.predict_on_batch(logits)
         
         return np.squeeze(action, axis=-1), np.squeeze(value, axis=-1)
 
 class CNNModel(BaseModel):
-    def __init__(self, num_actions, memory_size=8):
-        super().__init__('CNNModel', memory_size)
+    def __init__(self, num_actions, memory_size=8, name='CNNModel'):
+        super().__init__(name, memory_size)
         self.cnn = kl.Conv1D(filters=2, kernel_size=4)
         self.norm = kl.BatchNormalization()
         self.activation = kl.ReLU()
@@ -54,8 +54,8 @@ class CNNModel(BaseModel):
         return self.logits(hidden_logits), self.value(hidden_values)
 
 class LSTMModel(BaseModel):
-    def __init__(self, num_actions,memory_size=8):
-        super().__init__('LSTMModel', memory_size)
+    def __init__(self, num_actions,memory_size=8, name='LSTMModel'):
+        super().__init__(name, memory_size)
         self.lstm = kl.LSTM(16)
         self.actor = kl.Dense(64, activation='relu', kernel_initializer='he_normal')
         self.critic = kl.Dense(64, activation='relu', kernel_initializer='he_normal')
@@ -73,8 +73,8 @@ class LSTMModel(BaseModel):
         return self.logits(hidden_logits), self.value(hidden_values)
 
 class SimpleAC2(BaseModel):
-    def __init__(self, num_actions):
-        super().__init__('SimpleAC2')
+    def __init__(self, num_actions, name='SimpleAC2'):
+        super().__init__(name)
 
         self.actor = kl.Dense(128, activation='relu', kernel_initializer='he_normal')
         self.critic = kl.Dense(128, activation='relu', kernel_initializer='he_normal')
@@ -90,8 +90,8 @@ class SimpleAC2(BaseModel):
         return self.logits(hidden_logits), self.value(hidden_values)
 
 class SimpleAC(BaseModel):
-    def __init__(self, num_actions):
-        super().__init__('SimpleAC')
+    def __init__(self, num_actions, name='SimpleAC'):
+        super().__init__(name)
         
         self.decoder = kl.Dense(64, activation='relu', kernel_initializer='he_normal')
         self.actor = kl.Dense(32, activation='relu', kernel_initializer='he_normal')
