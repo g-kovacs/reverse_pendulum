@@ -7,7 +7,7 @@ import imageio
 
 
 class DCPEnv(gym.Env):
-
+    action_num = 7
     # Boundaries
     carDist = 4
     maxG = 1
@@ -83,7 +83,7 @@ class DCPEnv(gym.Env):
         return self._observation_space
 
     def __init__(self, numCars=1, timeStep=0.1, buffer_size=1):
-        self._action_space = spaces.Discrete(7 * numCars)
+        self._action_space = spaces.Discrete(DCPEnv.action_num * numCars)
         DCPEnv.maxX = (1 + numCars) / 2 * DCPEnv.carDist
         boundary = np.array([self.maxG,
                              np.finfo(np.float32).max,

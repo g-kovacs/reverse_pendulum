@@ -14,21 +14,17 @@ train.py usage
 
 
 def run():
-    for gamma in [0.95, 0.99, 0.999]:
-        models = []
-        #models.append(m.SimpleAC(num_actions=env.action_space.n))
-        models.append(m.SimpleAC2(num_actions=env.action_space.n,name=f'{gamma}'))
-        #models.append(m.CNNModel(num_actions=env.action_space.n))
-        #models.append(m.LSTMModel(num_actions=env.action_space.n,memory_size=4))
-        agent = A2CAgent(gamma=gamma)
-        env = DCPEnv(numCars=len(models))
+    models = []
+    models.append(m.SimpleAC2(num_actions=DCPEnv.action_num))
+    env = DCPEnv(numCars=len(models))
+    agent = A2CAgent()
 
-        for model in models:
-            starttime = timer()
-            rewards_history = agent.train(env, model, 64, 100)
-            dt = timer() - starttime
-            plt.plot(rewards_history, label=model.label)
-            print(f'Finished training {model.label} in {int(dt)} seconds')
+    for model in models:
+        starttime = timer()
+        rewards_history = agent.train(env, model, 64, 100)
+        dt = timer() - starttime
+        plt.plot(rewards_history, label=model.label)
+        print(f'Finished training {model.label} in {int(dt)} seconds')
     plt.legend()
     plt.draw()
     print("Finished training, testing...")

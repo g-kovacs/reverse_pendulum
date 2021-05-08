@@ -63,21 +63,22 @@ class A2CAgent:
             for step in range(batch_size):
                 observations[step] = obs_window
                 for m_i, model in enumerate(models):
-                    actions[step][m_i], values[step][m_i] = model.action_value(obs_window)
+                    actions[step, m_i], values[step, m_i] = model.action_value(obs_window)
                 obs_window, rewards[step], dones[step] = env.step(actions[step])
                 if any(dones[step]):
                     obs_window = env.reset()
                     for model in models[[i for i,b in enumerate(dones[step]) if b]]:
                         deaths[model.label] += 1
-            next_values = np.empty(model_num)
             for m_i, model in enumerate(models):
-                _, next_values[m_i] = model.action_value(obs_window)
+                _, next_value = model.action_value(obs_window)
+                returns, advs = self._returns_advantages(rewards[:,m_i],
+                                                        dones[:,m_i],
+                                                        values[:,m_i],
+                                                        next_value)
+                # A trick to input actions and advantages through same API.
+                acts_and_advs = np.concatenate([actions[None,:,m_i], advs[:, None]], axis=-1)
 
-            returns, advs = self._returns_advantages(rewards, dones, values, next_values)
-            # A trick to input actions and advantages through same API.
-            acts_and_advs = np.concatenate([actions[:, None], advs[:, None]], axis=-1)
-
-            model.train_on_batch(observations, [acts_and_advs, returns])
+                model.train_on_batch(observations, [acts_and_advs, returns])
         return deaths
 
     def _returns_advantages(self, rewards, dones, values, next_value):
