@@ -7,22 +7,30 @@ class ProbabilityDistribution(tf.keras.Model):
         return tf.squeeze(tf.random.categorical(logits, 1), axis=-1)
 
 class BaseModel(tf.keras.Model):
+    buffer = np.empty(0)
+
+    @classmethod
+    def _reset_buffer(cls):
+        BaseModel.buffer = np.empty(0)
+
     def __init__(self, name, window_size = 1):
         super().__init__(name)
         self.label = name
         self.window_size = window_size
+        if window_size > BaseModel.buffer.shape[0]:
+            BaseModel.buffer = np.resize(BaseModel.buffer, window_size)
         self.dist = ProbabilityDistribution()
     
-    def reset_buffer(self, initial_obs):
-        self.buffer = np.array([initial_obs]*self.window_size)
-
-    def action_value(self, obs, training = True):
-        # If called for prediction on
-        # subsequent observations
-        if not training and self.window_size > 1:
-            self.buffer = np.roll(self.buffer,-1,axis=0)
-            self.buffer[-1] = obs
-            obs = self.buffer
+    def register_observation(self, observation, reset = False):
+        if reset:
+            BaseModel.buffer = np.array([observation]*BaseModel.buffer.shape[0])
+        else:
+            BaseModel.buffer = np.roll(BaseModel.buffer,-1,axis=0)
+            BaseModel.buffer[-1] = observation
+        return BaseModel.buffer
+    
+    def action_value(self, obs):
+        obs = obs[-self.window_size:]
         logits, value = self.predict_on_batch(obs[None,:])
         action = self.dist.predict_on_batch(logits)
         

@@ -48,14 +48,13 @@ class A2CAgent:
                 loss=[self._logits_loss, self._value_loss])
         model_num = models.shape[0]
         # Storage helpers for a single batch of data.
-        actions = np.empty((model_num, batch_size), dtype=np.int32)
-        rewards, dones, values = np.empty((3, batch_size))
+        actions = np.empty((batch_size, model_num), dtype=np.int32)
+        rewards, dones, values = np.empty((3, batch_size, model_num))
         max_window_size = 0
         for model in models:
             if(max_window_size < model.window_size):
                 max_window_size = model.window_size
-        model = models[0]    #TODO remove
-        observations = np.empty((batch_size, ) + env.observation_space.shape)
+        observations = np.empty((batch_size, max_window_size) + env.observation_space.shape)
 
         # Training loop: collect samples, send to optimizer, repeat updates times.
         ep_rewards = []
@@ -64,12 +63,13 @@ class A2CAgent:
         next_reward = 0.0
         for _ in range(updates):
             for step in range(batch_size):
-                actions[step], values[step] = model.action_value(next_obs, False)
+                for m_i, model in enumerate(models):
+                    actions[step][m_i], values[step][m_i] = model.action_value(next_obs, False)
                 if model.window_size > 1:
                     observations[step] = model.buffer
                 else:
                     observations[step] = next_obs
-                next_obs, rewards[step], dones[step], _ = env.step(actions[step])
+                next_obs, rewards[step], dones[step] = env.step(actions[step])
                 next_reward += rewards[step]
                 if dones[step]:
                     ep_rewards.append(next_reward)
