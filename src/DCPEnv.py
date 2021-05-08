@@ -133,7 +133,7 @@ class DCPEnv(gym.Env):
                 state.wind_blow(np.random.choice([-t, t]))
             state.add_torque(torque)
 
-            if np.abs(state.p_G) > self.maxG or np.abs(state.c_X) > self.maxX:
+            if abs(state.p_G) > self.maxG or abs(state.c_X) > self.maxX:
                 terminates[i] = True
         for i in range(len(self.states) - 1):
             self._collision_detect(self.states[i], self.states[i+1])
