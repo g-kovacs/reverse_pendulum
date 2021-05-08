@@ -2,7 +2,7 @@ import gym
 from gym import spaces
 from dataclasses import dataclass, astuple
 import numpy as np
-from CarRenderer import CarRenderer, Color
+from CarRenderer import CarRenderer
 
 
 class DCPEnv(gym.Env):
@@ -42,12 +42,9 @@ class DCPEnv(gym.Env):
         def wind_blow(self, torque):
             self.p_dG += torque / DCPEnv.p_I * DCPEnv.dt
 
-        def hit(self, force):
-            self.c_dX += force / DCPEnv.mC * DCPEnv.dt
-
         def noise(self):
             noise = np.random.standard_normal(4)
-            scale = (.2, .01, .5, .1)
+            scale = (.1, .01, .4, .1)
             self.p_G, self.p_dG, self.c_X, self.c_dX = (
                 x + s * n for x, s, n in zip(self.flatten(), scale, noise))
             return self
@@ -116,8 +113,8 @@ class DCPEnv(gym.Env):
                              self.action_space.n)[action]
 
         if np.random.random() < 1e-4:
-            self.states[0].hit(np.random.choice([-0.01, 0.01]))
-            #self.state.c_dX *= -1
+            t = np.random.standard_normal() * 0.2
+            self.states[0].wind_blow(np.random.choice([-t, t]))
         self.states[0].add_torque(torque)
 
         terminate = False
