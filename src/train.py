@@ -14,7 +14,6 @@ train.py usage
 
 
 def run():
-    env = DCPEnv()
     for gamma in [0.95, 0.99, 0.999]:
         models = []
         #models.append(m.SimpleAC(num_actions=env.action_space.n))
@@ -22,6 +21,8 @@ def run():
         #models.append(m.CNNModel(num_actions=env.action_space.n))
         #models.append(m.LSTMModel(num_actions=env.action_space.n,memory_size=4))
         agent = A2CAgent(gamma=gamma)
+        env = DCPEnv(numCars=len(models))
+
         for model in models:
             starttime = timer()
             rewards_history = agent.train(env, model, 64, 100)

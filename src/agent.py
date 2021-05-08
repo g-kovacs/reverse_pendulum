@@ -5,7 +5,7 @@ import numpy as np
 import collections
 
 class A2CAgent:
-    def __init__(self, lr=7e-3, gamma=0.999, value_c=0.5, entropy_c=1e-4):
+    def __init__(self, lr=7e-3, gamma=0.99, value_c=0.5, entropy_c=1e-4):
         # `gamma` is the discount factor
         self.gamma = gamma
         # Coefficients are used for the loss terms.
@@ -42,10 +42,8 @@ class A2CAgent:
         if not isinstance(models, (collections.Sequence, np.ndarray)):
             models = np.array([models])
         for model in models:
-            model.compile(
-                optimizer=ko.RMSprop(lr=self.lr),
-                # Define separate losses for policy logits and value estimate.
-                loss=[self._logits_loss, self._value_loss])
+            model.compile(optimizer=ko.RMSprop(lr=self.lr),
+                    loss=[self._logits_loss, self._value_loss])
         model_num = models.shape[0]
         # Storage helpers for a single batch of data.
         actions = np.empty((batch_size, model_num), dtype=np.int32)
@@ -57,35 +55,30 @@ class A2CAgent:
         observations = np.empty((batch_size, max_window_size) + env.observation_space.shape)
 
         # Training loop: collect samples, send to optimizer, repeat updates times.
-        ep_rewards = []
-        next_obs = env.reset()
-        model.reset_buffer(next_obs)
-        next_reward = 0.0
+        deaths = {}
+        for model in models:
+            deaths[model.label] = 0
+        obs_window = env.reset()
         for _ in range(updates):
             for step in range(batch_size):
+                observations[step] = obs_window
                 for m_i, model in enumerate(models):
-                    actions[step][m_i], values[step][m_i] = model.action_value(next_obs, False)
-                if model.window_size > 1:
-                    observations[step] = model.buffer
-                else:
-                    observations[step] = next_obs
-                next_obs, rewards[step], dones[step] = env.step(actions[step])
-                next_reward += rewards[step]
-                if dones[step]:
-                    ep_rewards.append(next_reward)
-                    next_reward = 0
-                    next_obs = env.reset()
-                    if model.window_size > 1:
-                        model.reset_buffer(next_obs)
+                    actions[step][m_i], values[step][m_i] = model.action_value(obs_window)
+                obs_window, rewards[step], dones[step] = env.step(actions[step])
+                if any(dones[step]):
+                    obs_window = env.reset()
+                    for model in models[[i for i,b in enumerate(dones[step]) if b]]:
+                        deaths[model.label] += 1
+            next_values = np.empty(model_num)
+            for m_i, model in enumerate(models):
+                _, next_values[m_i] = model.action_value(obs_window)
 
-            _, next_value = model.action_value(next_obs, False)
-
-            returns, advs = self._returns_advantages(rewards, dones, values, next_value)
+            returns, advs = self._returns_advantages(rewards, dones, values, next_values)
             # A trick to input actions and advantages through same API.
             acts_and_advs = np.concatenate([actions[:, None], advs[:, None]], axis=-1)
 
             model.train_on_batch(observations, [acts_and_advs, returns])
-        return ep_rewards
+        return deaths
 
     def _returns_advantages(self, rewards, dones, values, next_value):
         # `next_value` is the bootstrap value estimate of the future state (critic).

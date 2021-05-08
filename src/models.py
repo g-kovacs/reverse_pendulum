@@ -7,33 +7,23 @@ class ProbabilityDistribution(tf.keras.Model):
         return tf.squeeze(tf.random.categorical(logits, 1), axis=-1)
 
 class BaseModel(tf.keras.Model):
-    buffer = np.empty(0)
-
-    @classmethod
-    def _reset_buffer(cls):
-        BaseModel.buffer = np.empty(0)
-
-    def __init__(self, name, window_size = 1):
+    labels = {}
+    def __init__(self, name, input_size = 1):
         super().__init__(name)
-        self.label = name
-        self.window_size = window_size
-        if window_size > BaseModel.buffer.shape[0]:
-            BaseModel.buffer = np.resize(BaseModel.buffer, window_size)
+        if name not in BaseModel.labels:
+            BaseModel.labels[name] = 0
+        BaseModel.labels[name] +=1
+        self.label = name + '_' + str(BaseModel.labels[name])
+        self.input_size = input_size
         self.dist = ProbabilityDistribution()
     
-    def register_observation(self, observation, reset = False):
-        if reset:
-            BaseModel.buffer = np.array([observation]*BaseModel.buffer.shape[0])
-        else:
-            BaseModel.buffer = np.roll(BaseModel.buffer,-1,axis=0)
-            BaseModel.buffer[-1] = observation
-        return BaseModel.buffer
-    
     def action_value(self, obs):
-        obs = obs[-self.window_size:]
-        logits, value = self.predict_on_batch(obs[None,:])
+        obs = obs[-self.input_size:]
+        if self.input_size > 1:
+            obs = obs[None,:]
+        logits, value = self.predict_on_batch(obs)
         action = self.dist.predict_on_batch(logits)
-        
+        #TODO test action shapes
         return np.squeeze(action, axis=-1), np.squeeze(value, axis=-1)
 
 class CNNModel(BaseModel):
@@ -62,7 +52,7 @@ class CNNModel(BaseModel):
         return self.logits(hidden_logits), self.value(hidden_values)
 
 class LSTMModel(BaseModel):
-    def __init__(self, num_actions,memory_size=8, name='LSTMModel'):
+    def __init__(self, num_actions, memory_size=8, name='LSTMModel'):
         super().__init__(name, memory_size)
         self.lstm = kl.LSTM(16)
         self.actor = kl.Dense(64, activation='relu', kernel_initializer='he_normal')

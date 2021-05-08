@@ -3,6 +3,7 @@ from gym import spaces
 from dataclasses import dataclass, astuple
 import numpy as np
 from CarRenderer import CarRenderer
+import imageio
 
 
 class DCPEnv(gym.Env):
@@ -81,7 +82,7 @@ class DCPEnv(gym.Env):
     def observation_space(self):
         return self._observation_space
 
-    def __init__(self, numCars=1, timeStep=0.1):
+    def __init__(self, numCars=1, timeStep=0.1, buffer_size=1):
         self._action_space = spaces.Discrete(7 * numCars)
         DCPEnv.maxX = (1 + numCars) / 2 * DCPEnv.carDist
         boundary = np.array([self.maxG,
@@ -96,6 +97,12 @@ class DCPEnv(gym.Env):
         self.render_data = {"wW": self.maxX * 2, "pW": self.mP / self.lenP,
                             "pL": self.lenP, "cW": self.car_width, "wR": self.radW}
         self.numCars = numCars
+        self.buffer_size = buffer_size
+    
+    def _register_observation(self, observation):
+        self.buffer = np.roll(self.buffer,-1,axis=0)
+        self.buffer[-1] = observation
+        return self.buffer
 
     def _init_renderer(self):
         viewer = CarRenderer(data_dict=self.render_data)
@@ -106,21 +113,39 @@ class DCPEnv(gym.Env):
     def _convert_states(self):
         return np.array(sum((astuple(s) for s in self.states), tuple()))
 
+    def _save_gif(self, frames, path):
+        size = frames[0].shape
+        with imageio.get_writer(path, mode='I') as writer:
+            for frame in frames:
+                writer.append_data(frame)
+
+    def _collision_detect(self, left, right):
+        if abs(left.c_X - right.c_X) < DCPEnv.car_width:
+            push = (left.c_X - right.c_X) * DCPEnv.dt / 2
+            left.c_X -= push
+            right.c_X += push
+            left.c_dX, right.c_dX = right.c_dX, left.c_dX
+
     # ==================================================
     # =================== STEP =========================
-    def step(self, action):
-        torque = np.linspace(-self.maxT, self.maxT,
-                             self.action_space.n)[action]
+    def step(self, actions):
+        terminates = [False] * self.numCars
+        for state, action, i in zip(self.states, actions, range(self.numCars)):
+            torque = np.linspace(-self.maxT, self.maxT,
+                                 self.action_space.n)[action]
 
-        if np.random.random() < 1e-4:
-            t = np.random.standard_normal() * 0.2
-            self.states[0].wind_blow(np.random.choice([-t, t]))
-        self.states[0].add_torque(torque)
+            if np.random.random() < 1e-4:
+                t = np.random.standard_normal() * 0.2
+                state.wind_blow(np.random.choice([-t, t]))
+            state.add_torque(torque)
 
-        terminate = False
-        if np.abs(self.states[0].p_G) > self.maxG or np.abs(self.states[0].c_X) > self.maxX:
-            terminate = True
-        return np.array(self._convert_states()), 1.0, terminate, {"action": action}
+            if abs(state.p_G) > self.maxG or abs(state.c_X) > self.maxX:
+                terminates[i] = True
+        for i in range(len(self.states) - 1):
+            self._collision_detect(self.states[i], self.states[i+1])
+
+        next_state = np.array(self._convert_states())
+        return self._register_observation(next_state), (1.0,) * 4, terminates
 
     # ==================================================
     # =================== RESET ========================
@@ -129,27 +154,34 @@ class DCPEnv(gym.Env):
         self.states = [DCPEnv.State(
             c_X=DCPEnv.carDist*(1-self.numCars+2*i)/2).noise()
             for i in range(self.numCars)]
-        return self._convert_states()
+        state = self._convert_states()
+        self.buffer = np.array([state]*self.buffer_size)
+        return self.buffer
 
-    def test(self, model, render=True):
-        obs, done, ep_reward = self.reset(), False, 0
-        model.reset_buffer(obs)
+    def test(self, model, render=True, gif_path=None):
+        obs_window, done, ep_reward = self.reset(), False, 0
+        frames = []
         while not done:
             if render:
-                self.render()
-            action, _ = model.action_value(obs, False)
-            obs, reward, done, _ = self.step(action)
+                if gif_path is not None:
+                    frames.append(self.render(mode='rgb_array'))
+                else:
+                    self.render(mode='human')
+            action, _ = model.action_value(obs_window)
+            obs_window, reward, done, _ = self.step(action)
             ep_reward += reward
+        if len(frames) > 0:
+            self._save_gif(frames, gif_path)
         return ep_reward
 
-    def render(self):
+    def render(self, mode):
         if self.viewer is None:
             self.viewer = self._init_renderer()
 
         if self.states is None:
             return None
 
-        return self.viewer.render_cars(self.states)
+        return self.viewer.render_cars(self.states, mode)
 
     def close(self):
         if self.viewer:
@@ -160,7 +192,7 @@ class DCPEnv(gym.Env):
 def preview():
     env = DCPEnv(numCars=4)
     print(env.reset())
-    env.render()
+    env.render('human')
     input("")
     env.close()
 
