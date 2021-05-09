@@ -15,30 +15,36 @@ train.py usage
 
 def run():
     config = Models.ModelConfiguration([
-        Models.SimpleAC(num_actions=DCPEnv.actions_size),
-        #Models.SimpleAC2(num_actions=DCPEnv.actions_size),
-        #Models.LSTMModel(num_actions=DCPEnv.actions_size),
+        #Models.SimpleAC(num_actions=DCPEnv.actions_size),
+        Models.SimpleAC2(num_actions=DCPEnv.actions_size),
+        Models.LSTMModel(num_actions=DCPEnv.actions_size),
     ])
     env = DCPEnv(num_cars=config.num, buffer_size=config.window_size)
     agent = A2CAgent()
     starttime = timer()
-    episodes, deaths = agent.train(env, config, 4, 6)
+    episodes, deaths = agent.train(env, config, 128, 1000)
     dt = timer() - starttime
+    
+    fig = plt.figure()
     if(len(deaths)>1):
-        plt.pie(list(deaths.values()),
+        ax = fig.add_subplot(121)
+        ax.set_title("Death Counts")
+        ax.pie(list(deaths.values()),
                     labels=list(deaths.keys()),
                     explode=[0.1]*config.num,
                     shadow=True,
-                    autopct=lambda p : f'{p * sum(deaths.values())/100}')
+                    autopct=lambda p : f'{int(p * sum(deaths.values())/100)}')
+        ax = fig.add_subplot(122)
     else:
-        plt.plot(episodes,'bo', markersize=2)
-        plt.ylabel('seconds')
-        plt.xlabel('episodes')
+        ax = fig.add_subplot(111)
+    ax.set_title("Training history")
+    ax.plot(episodes,'bo', markersize=2)
+    ax.set(xlabel='episodes', ylabel='seconds')
 
     plt.draw()
     print(f"Finished training in {int(dt+1)} seconds, testing...")
-    seconds, death_list = env.test(config.get(), False)
-    print(f'Alive for {seconds} seconds')
+    seconds, death_list = env.test(config.get(), True, 'ACvsAC2.gif')
+    print(f'Alive for {int(seconds)} seconds')
     print('Died:')
     print(death_list)
     env.close()
