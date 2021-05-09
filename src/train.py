@@ -12,28 +12,22 @@ train.py usage
     -g:     Use GPU for calculations (default is CPU)
 """
 
-
 def run():
-    models = []
-    models.append(Models.SimpleAC2(num_actions=DCPEnv.action_num))
-    max_window = 1
-    for m in models:
-        if m.input_size > max_window:
-            max_window = m.input_size
-    env = DCPEnv(numCars=len(models), buffer_size=max_window)
+    models = Models.ModelConfiguration([
+        Models.SimpleAC2(num_actions=DCPEnv.actions_size),
+    ])
+    env = DCPEnv(numCars=models.num, buffer_size=models.window_size)
     agent = A2CAgent()
-    for model in models:
-        starttime = timer()
-        rewards_history = agent.train(env, models, 64, 100)
-        dt = timer() - starttime
-        plt.plot(rewards_history, label=model.label)
-        print(f'Finished training {model.label} in {int(dt)} seconds')
-    plt.legend()
+    starttime = timer()
+    rewards_history = agent.train(env, models, 64, 100)
+    dt = timer() - starttime
+    plt.plot(list(rewards_history.values()), label=list(rewards_history.keys()))
     plt.draw()
-    print("Finished training, testing...")
-    for model in models:
-        print(f'Test result of {model.label}: {env.test(model, False) / 10.0}')
-        model.save_weights(f'saves/{model.label}')
+    print(f"Finished training in {dt} seconds, testing...")
+    seconds, death_list = env.test(models, False)
+    print(f'Alive for {seconds} seconds')
+    print('Died:')
+    print(death_list)
     env.close()
     plt.show()
 

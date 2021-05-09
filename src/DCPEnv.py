@@ -80,14 +80,14 @@ class DCPEnv(gym.Env):
     
     actions_size = 7
 
-    def __init__(self, numCars=1, timeStep=0.1, buffer_size=1):
-        DCPEnv.maxX = (1 + numCars) / 2 * DCPEnv.carDist
-        self.observations_size = len(DCPEnv.State.__dict__) * numCars
-        DCPEnv.dt = timeStep
+    def __init__(self, num_cars=1, time_step=0.1, buffer_size=1):
+        DCPEnv.maxX = (1 + num_cars) / 2 * DCPEnv.carDist
+        self.observations_size = len(DCPEnv.State.__dict__) * num_cars
+        DCPEnv.dt = time_step
         self.viewer = None
         self.render_data = {"wW": self.maxX * 2, "pW": self.mP / self.lenP,
                             "pL": self.lenP, "cW": self.car_width, "wR": self.radW}
-        self.numCars = numCars
+        self.num_cars = num_cars
         self.buffer_size = buffer_size
     
     def _register_observation(self, observation):
@@ -97,7 +97,7 @@ class DCPEnv(gym.Env):
 
     def _init_renderer(self):
         viewer = CarRenderer(data_dict=self.render_data)
-        for _ in range(self.numCars):
+        for _ in range(self.num_cars):
             viewer.add_car()
         return viewer
 
@@ -120,8 +120,8 @@ class DCPEnv(gym.Env):
     # ==================================================
     # =================== STEP =========================
     def step(self, actions):
-        terminates = [False] * self.numCars
-        for state, action, i in zip(self.states, actions, range(self.numCars)):
+        terminates = [False] * self.num_cars
+        for state, action, i in zip(self.states, actions, range(self.num_cars)):
             torque = np.linspace(-self.maxT, self.maxT,
                                  self.actions_size)[action]
 
@@ -143,8 +143,8 @@ class DCPEnv(gym.Env):
     # ========== initialize cars here ==================
     def reset(self):
         self.states = [DCPEnv.State(
-            c_X=DCPEnv.carDist*(1-self.numCars+2*i)/2).noise()
-            for i in range(self.numCars)]
+            c_X=DCPEnv.carDist*(1-self.num_cars+2*i)/2).noise()
+            for i in range(self.num_cars)]
         state = self._convert_states()
         self.buffer = np.array([state]*self.buffer_size)
         return self.buffer
@@ -152,20 +152,28 @@ class DCPEnv(gym.Env):
     def test(self, models, render=True, gif_path=None):
         if not isinstance(models, (collections.Sequence, np.ndarray)):
             models = np.array([models])
-        obs_window, done, ep_reward = self.reset(), False, 0
+        model_num = len(models)
+        obs_window, deaths = self.reset(), [False] * model_num
         frames = []
-        while not done:
+        actions = np.empty(model_num)
+        steps = 0
+        while not any(deaths):
             if render:
                 if gif_path is not None:
                     frames.append(self.render(mode='rgb_array'))
                 else:
                     self.render(mode='human')
-            action, _ = model.action_value(obs_window)
-            obs_window, reward, done, _ = self.step(action)
-            ep_reward += reward
+
+            for m_i, model in enumerate(models):
+                actions[m_i], _ = model.action_value(obs_window)
+            obs_window, _, deaths = self.step(actions)
+            steps += 1
         if len(frames) > 0:
             self._save_gif(frames, gif_path)
-        return ep_reward
+        death_list = {}
+        for model, dead in zip(models, deaths):
+              death_list[model.label] = dead
+        return steps*DCPEnv.dt, death_list
 
     def render(self, mode):
         if self.viewer is None:
@@ -183,9 +191,9 @@ class DCPEnv(gym.Env):
 
 
 def preview():
-    env = DCPEnv(numCars=4)
+    env = DCPEnv(num_cars=4)
     print(env.reset())
-    env.render('human')
+    env.render(True)
     input("")
     env.close()
 

@@ -1,12 +1,50 @@
 import tensorflow as tf
 import tensorflow.keras.layers as kl
 import numpy as np
+import collections
+import os
+from shutil import make_archive
 
-class ProbabilityDistribution(tf.keras.Model):
-    def call(self, logits, **kwargs):
-        return tf.squeeze(tf.random.categorical(logits, 1), axis=-1)
+class ModelConfiguration:
+    @property
+    def window_size(self):
+        max_window = 1
+        for m in self.__models:
+            if m.input_size > max_window:
+                max_window = m.input_size
+        return max_window
+    
+    @property
+    def num(self):
+        return len(self.__models)
+
+    def __init__(self, models, label='default'):
+        self.label = label
+        if not isinstance(models, (collections.Sequence, np.ndarray)):
+            models = np.array([models])
+        self.__models = models
+    
+    def __get__(self, instance, owner):
+        return self.__models
+
+    def save(self):
+        dict_path = os.path.join('saves', self.label)
+        if not os.path.exists(dict_path):
+            os.makedirs(dict_path)
+        for model in self.__models:
+            model.save_weights(os.path.join(dict_path,model.label))
+        return make_archive(self.label,'zip',dict_path,dict_path)
+    
+    @classmethod
+    def load(cls):
+        pass #TODO
+    
 
 class BaseModel(tf.keras.Model):
+    class ProbabilityDistribution(tf.keras.Model):
+        def call(self, logits, **kwargs):
+            return tf.squeeze(tf.random.categorical(logits, 1), axis=-1)
+
     labels = {}
     def __init__(self, name, input_size = 1):
         super().__init__(name)
@@ -15,7 +53,7 @@ class BaseModel(tf.keras.Model):
         BaseModel.labels[name] +=1
         self.label = name + '_' + str(BaseModel.labels[name])
         self.input_size = input_size
-        self.dist = ProbabilityDistribution()
+        self.dist = BaseModel.ProbabilityDistribution()
     
     def action_value(self, obs):
         obs = obs[-self.input_size:]
