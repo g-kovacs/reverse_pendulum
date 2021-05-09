@@ -189,7 +189,7 @@ class DCPEnv(gym.Env):
 def preview():
     env = DCPEnv(num_cars=4)
     print(env.reset())
-    env.render(True)
+    env.render('human')
     input("")
     env.close()
 

@@ -1,3 +1,5 @@
 gym
 numpy
 tensorflow
+imageio
+matplotlib

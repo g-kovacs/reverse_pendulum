@@ -82,6 +82,7 @@ class A2CAgent:
                 acts_and_advs = np.concatenate([actions[:,m_i, None], advs[:, None]], axis=-1)
 
                 model.train_on_batch(observations, [acts_and_advs, returns])
+        config.save()
         return episodes, deaths
 
     def _returns_advantages(self, rewards, dones, values, next_value):
