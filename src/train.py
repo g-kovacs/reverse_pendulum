@@ -1,4 +1,5 @@
 from matplotlib import pyplot as plt
+import matplotlib as mpl
 from DCPEnv import DCPEnv
 import Models as Models
 from agent import A2CAgent
@@ -13,18 +14,30 @@ train.py usage
 """
 
 def run():
-    models = Models.ModelConfiguration([
-        Models.SimpleAC2(num_actions=DCPEnv.actions_size),
+    config = Models.ModelConfiguration([
+        Models.SimpleAC(num_actions=DCPEnv.actions_size),
+        #Models.SimpleAC2(num_actions=DCPEnv.actions_size),
+        #Models.LSTMModel(num_actions=DCPEnv.actions_size),
     ])
-    env = DCPEnv(numCars=models.num, buffer_size=models.window_size)
+    env = DCPEnv(num_cars=config.num, buffer_size=config.window_size)
     agent = A2CAgent()
     starttime = timer()
-    rewards_history = agent.train(env, models, 64, 100)
+    episodes, deaths = agent.train(env, config, 4, 6)
     dt = timer() - starttime
-    plt.plot(list(rewards_history.values()), label=list(rewards_history.keys()))
+    if(len(deaths)>1):
+        plt.pie(list(deaths.values()),
+                    labels=list(deaths.keys()),
+                    explode=[0.1]*config.num,
+                    shadow=True,
+                    autopct=lambda p : f'{p * sum(deaths.values())/100}')
+    else:
+        plt.plot(episodes,'bo', markersize=2)
+        plt.ylabel('seconds')
+        plt.xlabel('episodes')
+
     plt.draw()
-    print(f"Finished training in {dt} seconds, testing...")
-    seconds, death_list = env.test(models, False)
+    print(f"Finished training in {int(dt+1)} seconds, testing...")
+    seconds, death_list = env.test(config.get(), False)
     print(f'Alive for {seconds} seconds')
     print('Died:')
     print(death_list)
@@ -33,6 +46,8 @@ def run():
 
 
 def main(argv):
+    mpl.rcParams['toolbar'] = 'None'
+
     environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
     try:

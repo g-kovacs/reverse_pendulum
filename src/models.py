@@ -21,10 +21,10 @@ class ModelConfiguration:
     def __init__(self, models, label='default'):
         self.label = label
         if not isinstance(models, (collections.Sequence, np.ndarray)):
-            models = np.array([models])
+            models = [models]
         self.__models = models
     
-    def __get__(self, instance, owner):
+    def get(self):
         return self.__models
 
     def save(self):

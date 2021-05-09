@@ -1,4 +1,5 @@
 import gym
+import dataclasses
 from dataclasses import dataclass, astuple
 import numpy as np
 from CarRenderer import CarRenderer
@@ -73,16 +74,12 @@ class DCPEnv(gym.Env):
 
             self.p_dG += DCPEnv.dt * p_ddG
             self.p_G += DCPEnv.dt * self.p_dG
-
-    @property
-    def observations_size(self):
-        return self.observations_size
     
     actions_size = 7
 
     def __init__(self, num_cars=1, time_step=0.1, buffer_size=1):
         DCPEnv.maxX = (1 + num_cars) / 2 * DCPEnv.carDist
-        self.observations_size = len(DCPEnv.State.__dict__) * num_cars
+        self.observations_size = len(dataclasses.fields(DCPEnv.State)) * num_cars
         DCPEnv.dt = time_step
         self.viewer = None
         self.render_data = {"wW": self.maxX * 2, "pW": self.mP / self.lenP,
@@ -122,8 +119,7 @@ class DCPEnv(gym.Env):
     def step(self, actions):
         terminates = [False] * self.num_cars
         for state, action, i in zip(self.states, actions, range(self.num_cars)):
-            torque = np.linspace(-self.maxT, self.maxT,
-                                 self.actions_size)[action]
+            torque = np.linspace(-self.maxT, self.maxT, DCPEnv.actions_size)[action]
 
             if np.random.random() < 1e-4:
                 t = np.random.standard_normal() * 0.2
@@ -136,7 +132,7 @@ class DCPEnv(gym.Env):
             self._collision_detect(self.states[i], self.states[i+1])
 
         next_state = np.array(self._convert_states())
-        return self._register_observation(next_state), (1.0,) * 4, terminates
+        return self._register_observation(next_state), np.ones(self.num_cars), terminates
 
     # ==================================================
     # =================== RESET ========================
@@ -146,7 +142,7 @@ class DCPEnv(gym.Env):
             c_X=DCPEnv.carDist*(1-self.num_cars+2*i)/2).noise()
             for i in range(self.num_cars)]
         state = self._convert_states()
-        self.buffer = np.array([state]*self.buffer_size)
+        self.buffer = np.array([state for _ in range(self.buffer_size)])
         return self.buffer
 
     def test(self, models, render=True, gif_path=None):
@@ -155,7 +151,7 @@ class DCPEnv(gym.Env):
         model_num = len(models)
         obs_window, deaths = self.reset(), [False] * model_num
         frames = []
-        actions = np.empty(model_num)
+        actions = np.empty(model_num, dtype=np.int32)
         steps = 0
         while not any(deaths):
             if render:
