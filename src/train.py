@@ -23,6 +23,7 @@ def run():
     agent = A2CAgent()
     starttime = timer()
     episodes, deaths = agent.train(env, config, 4, 6)
+    config.save()
     dt = timer() - starttime
     if(len(deaths)>1):
         plt.pie(list(deaths.values()),
