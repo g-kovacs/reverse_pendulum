@@ -28,8 +28,6 @@ class A2CAgent:
         # Policy loss is defined by policy gradients, weighted by advantages.
         # Note: we only calculate the loss on the actions we've actually taken.
         actions = tf.cast(actions, tf.int32)
-        print(logits.shape)
-        print(actions.shape)
         policy_loss = weighted_sparse_ce(actions, logits, sample_weight=advantages)
 
         # Entropy loss can be calculated as cross-entropy over itself.
@@ -67,7 +65,7 @@ class A2CAgent:
                 obs_window, rewards[step], dones[step] = env.step(actions[step])
                 if any(dones[step]):
                     obs_window = env.reset()
-                    episodes.append(steps)
+                    episodes.append(steps*env.dt)
                     steps = 0
                     for dead, model in zip(dones[step], models):
                         if dead:
@@ -80,8 +78,7 @@ class A2CAgent:
                                                         next_value)
                 # A trick to input actions and advantages through same API.
                 acts_and_advs = np.concatenate([actions[:,m_i, None], advs[:, None]], axis=-1)
-
-                model.train_on_batch(observations, [acts_and_advs, returns])
+                model.train_on_batch(observations[:,-model.input_size:,:], [acts_and_advs, returns])
         return episodes, deaths
 
     def _returns_advantages(self, rewards, dones, values, next_value):
