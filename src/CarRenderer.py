@@ -93,7 +93,7 @@ class CarRenderer(rendering.Viewer):
         self._genAxle(car[:2])
         self.cars.append(car)
 
-    def render_cars(self, states: list):
+    def render_cars(self, states: list, mode="human"):
         scale = self.dims['scale']
         wR = self.dims['wR']
         cW = self.dims['cW']
@@ -109,7 +109,7 @@ class CarRenderer(rendering.Viewer):
             car[2].set_translation(carX - 1/3 * cW, wR)
             car[3].set_translation(carX + 1/3 * cW, wR)
 
-        self.render(return_rgb_array=False)
+        return self.render(return_rgb_array=mode == 'rgb_array')
 
 
 if __name__ == "__main__":
