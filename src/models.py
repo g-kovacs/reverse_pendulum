@@ -1,36 +1,72 @@
 import tensorflow as tf
 import tensorflow.keras.layers as kl
 import numpy as np
+import collections
+import os
+from shutil import make_archive
 
-class ProbabilityDistribution(tf.keras.Model):
-    def call(self, logits, **kwargs):
-        return tf.squeeze(tf.random.categorical(logits, 1), axis=-1)
+class ModelConfiguration:
+    @property
+    def window_size(self):
+        max_window = 1
+        for m in self.__models:
+            if m.input_size > max_window:
+                max_window = m.input_size
+        return max_window
+    
+    @property
+    def num(self):
+        return len(self.__models)
+
+    def __init__(self, models, label='default'):
+        self.label = label
+        if not isinstance(models, (collections.Sequence, np.ndarray)):
+            models = [models]
+        self.__models = models
+    
+    def get(self):
+        return self.__models
+
+    def save(self):
+        dict_path = os.path.join('saves', self.label)
+        if not os.path.exists(dict_path):
+            os.makedirs(dict_path)
+        for model in self.__models:
+            model.save_weights(os.path.join(dict_path,model.label))
+        return make_archive(self.label,'zip',dict_path,dict_path)
+    
+    @classmethod
+    def load(cls):
+        pass #TODO
+    
 
 class BaseModel(tf.keras.Model):
-    def __init__(self, name, window_size = 1):
-        super().__init__(name)
-        self.label = name
-        self.window_size = window_size
-        self.dist = ProbabilityDistribution()
-    
-    def reset_buffer(self, initial_obs):
-        self.buffer = np.array([initial_obs]*self.window_size)
+    class ProbabilityDistribution(tf.keras.Model):
+        def call(self, logits, **kwargs):
+            return tf.squeeze(tf.random.categorical(logits, 1), axis=-1)
 
-    def action_value(self, obs, training = True):
-        # If called for prediction on
-        # subsequent observations
-        if not training and self.window_size > 1:
-            self.buffer = np.roll(self.buffer,-1,axis=0)
-            self.buffer[-1] = obs[0]
-            obs = self.buffer[None,:]
+    labels = {}
+    def __init__(self, name, input_size = 1):
+        super().__init__(name)
+        if name not in BaseModel.labels:
+            BaseModel.labels[name] = 0
+        BaseModel.labels[name] +=1
+        self.label = name + '_' + str(BaseModel.labels[name])
+        self.input_size = input_size
+        self.dist = BaseModel.ProbabilityDistribution()
+    
+    def action_value(self, obs):
+        obs = obs[-self.input_size:]
+        if self.input_size > 1:
+            obs = obs[None,:]
         logits, value = self.predict_on_batch(obs)
         action = self.dist.predict_on_batch(logits)
-        
+        #TODO test action shapes
         return np.squeeze(action, axis=-1), np.squeeze(value, axis=-1)
 
 class CNNModel(BaseModel):
-    def __init__(self, num_actions, memory_size=8):
-        super().__init__('CNNModel', memory_size)
+    def __init__(self, num_actions, memory_size=8, name='CNNModel'):
+        super().__init__(name, memory_size)
         self.cnn = kl.Conv1D(filters=2, kernel_size=4)
         self.norm = kl.BatchNormalization()
         self.activation = kl.ReLU()
@@ -54,8 +90,8 @@ class CNNModel(BaseModel):
         return self.logits(hidden_logits), self.value(hidden_values)
 
 class LSTMModel(BaseModel):
-    def __init__(self, num_actions,memory_size=8):
-        super().__init__('LSTMModel', memory_size)
+    def __init__(self, num_actions, memory_size=8, name='LSTMModel'):
+        super().__init__(name, memory_size)
         self.lstm = kl.LSTM(16)
         self.actor = kl.Dense(64, activation='relu', kernel_initializer='he_normal')
         self.critic = kl.Dense(64, activation='relu', kernel_initializer='he_normal')
@@ -73,8 +109,8 @@ class LSTMModel(BaseModel):
         return self.logits(hidden_logits), self.value(hidden_values)
 
 class SimpleAC2(BaseModel):
-    def __init__(self, num_actions):
-        super().__init__('SimpleAC2')
+    def __init__(self, num_actions, name='SimpleAC2'):
+        super().__init__(name)
 
         self.actor = kl.Dense(128, activation='relu', kernel_initializer='he_normal')
         self.critic = kl.Dense(128, activation='relu', kernel_initializer='he_normal')
@@ -90,8 +126,8 @@ class SimpleAC2(BaseModel):
         return self.logits(hidden_logits), self.value(hidden_values)
 
 class SimpleAC(BaseModel):
-    def __init__(self, num_actions):
-        super().__init__('SimpleAC')
+    def __init__(self, num_actions, name='SimpleAC'):
+        super().__init__(name)
         
         self.decoder = kl.Dense(64, activation='relu', kernel_initializer='he_normal')
         self.actor = kl.Dense(32, activation='relu', kernel_initializer='he_normal')

@@ -1,6 +1,7 @@
 from matplotlib import pyplot as plt
+import matplotlib as mpl
 from DCPEnv import DCPEnv
-import models as m
+import Models as Models
 from agent import A2CAgent
 import sys, getopt
 from os import environ
@@ -12,32 +13,41 @@ train.py usage
     -g:     Use GPU for calculations (default is CPU)
 """
 
-
 def run():
-    env = DCPEnv()
-    models = []
-    #models.append(m.SimpleAC(num_actions=env.action_space.n))
-    models.append(m.SimpleAC2(num_actions=env.action_space.n))
-    #models.append(m.CNNModel(num_actions=env.action_space.n))
-    models.append(m.LSTMModel(num_actions=env.action_space.n,memory_size=32))
+    config = Models.ModelConfiguration([
+        Models.SimpleAC(num_actions=DCPEnv.actions_size),
+        #Models.SimpleAC2(num_actions=DCPEnv.actions_size),
+        #Models.LSTMModel(num_actions=DCPEnv.actions_size),
+    ])
+    env = DCPEnv(num_cars=config.num, buffer_size=config.window_size)
     agent = A2CAgent()
-    for model in models:
-        starttime = timer()
-        rewards_history = agent.train(env, model, 128, 500)
-        dt = timer() - starttime
-        plt.plot(rewards_history, label=model.label)
-        print(f'Finished training {model.label} in {int(dt)} seconds')
-    plt.legend()
+    starttime = timer()
+    episodes, deaths = agent.train(env, config, 4, 6)
+    dt = timer() - starttime
+    if(len(deaths)>1):
+        plt.pie(list(deaths.values()),
+                    labels=list(deaths.keys()),
+                    explode=[0.1]*config.num,
+                    shadow=True,
+                    autopct=lambda p : f'{p * sum(deaths.values())/100}')
+    else:
+        plt.plot(episodes,'bo', markersize=2)
+        plt.ylabel('seconds')
+        plt.xlabel('episodes')
+
     plt.draw()
-    print("Finished training, testing...")
-    for model in models:
-        print(f'Test result of {model.label}: {env.test(model, False) / 10.0}')
-        model.save_weights(f'saves/{model.label}')
+    print(f"Finished training in {int(dt+1)} seconds, testing...")
+    seconds, death_list = env.test(config.get(), False)
+    print(f'Alive for {seconds} seconds')
+    print('Died:')
+    print(death_list)
     env.close()
     plt.show()
 
 
 def main(argv):
+    mpl.rcParams['toolbar'] = 'None'
+
     environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
     try:
