@@ -120,8 +120,7 @@ class DCPEnv(gym.Env):
     def step(self, actions):
         terminates = [False] * self.num_cars
         for state, action, i in zip(self.states, actions, range(self.num_cars)):
-            torque = np.linspace(-self.maxT, self.maxT,
-                                 DCPEnv.actions_size)[action]
+            torque = np.linspace(-self.maxT, self.maxT, DCPEnv.actions_size)[action]
 
             if np.random.random() < 1e-4:
                 t = np.random.standard_normal() * 0.2
