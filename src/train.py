@@ -25,7 +25,7 @@ Models, registered from left to right in order of calling:
 
 
 def run(models, batch, sample):
-    config = Models.ModelConfiguration(models)
+    config = Models.ModelConfiguration(models, (batch, sample/batch))
     env = DCPEnv(num_cars=config.num, buffer_size=config.window_size)
     agent = A2CAgent(lr=1e-2)
     starttime = timer()
