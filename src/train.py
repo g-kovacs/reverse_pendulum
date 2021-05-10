@@ -6,7 +6,6 @@ from agent import A2CAgent
 import sys
 import getopt
 import os
-from timeit import default_timer as timer
 
 helpMSG = """
 train.py usage
@@ -21,18 +20,17 @@ cfg_name = '.'.join(
 def run():
     config = Models.ModelConfiguration([
         # Models.SimpleAC(num_actions=DCPEnv.actions_size),
-        Models.SimpleAC2(num_actions=DCPEnv.actions_size),
-        Models.SimpleAC2(num_actions=DCPEnv.actions_size),
+        #Models.SimpleAC2(num_actions=DCPEnv.actions_size),
+        Models.GRUModel(num_actions=DCPEnv.actions_size,memory_size=2),
+        Models.GRUModel(num_actions=DCPEnv.actions_size,memory_size=2),
         #Models.LSTMModel(num_actions=DCPEnv.actions_size,memory_size=2),
-    ], 'AC2vsAC2_64_0.01x2')
+    ], 'GRUvsGRU_8_2_0.01x8')
     env = DCPEnv(num_cars=config.num, buffer_size=config.window_size)
     agent = A2CAgent(lr=1e-2)
-    starttime = timer()
-    batch_size = 64
-    sample_count = 128000
+    batch_size = 8
+    sample_count = 512000
     episodes, deaths = agent.train(env, config, batch_size, sample_count//batch_size)
     config.save()
-    dt = timer() - starttime
 
     fig = plt.figure()
     if(len(deaths) > 1):
@@ -52,10 +50,9 @@ def run():
     ax.set(xlabel='episodes', ylabel='seconds')
 
     plt.draw()
-    print(f"Finished training in {int(dt+1)} seconds, testing...")
     if not os.path.exists('media'):
         os.makedirs('media')
-    seconds, death_list = env.test(config.get(), True, f'media/{config.label}.gif')
+    seconds, death_list = env.test(config.get(), False, f'media/{config.label}.gif')
     print(f'Alive for {int(seconds)} seconds')
     print('Died:')
     print(death_list)
