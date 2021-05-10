@@ -21,10 +21,14 @@ class ModelConfiguration:
     def num(self):
         return len(self.__models)
 
-    def __init__(self, models, label='default'):
-        self.label = label
+    def __init__(self, models, label=None):
+        
         if not isinstance(models, (collections.Sequence, np.ndarray)):
             models = [models]
+        if label is None:
+            self.label = 'vs'.join([model.label for model in models])
+        else:
+            self.label = label
         self.__models = models
 
     def get(self):
