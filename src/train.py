@@ -1,7 +1,7 @@
 from matplotlib import pyplot as plt
 import matplotlib as mpl
 from DCPEnv import DCPEnv
-import Models as Models
+import Models
 from agent import A2CAgent
 import sys, getopt
 from os import environ
@@ -18,11 +18,11 @@ def run():
         #Models.SimpleAC(num_actions=DCPEnv.actions_size),
         Models.SimpleAC2(num_actions=DCPEnv.actions_size),
         Models.LSTMModel(num_actions=DCPEnv.actions_size),
-    ])
+    ], 'AC2vsLSTM')
     env = DCPEnv(num_cars=config.num, buffer_size=config.window_size)
     agent = A2CAgent()
     starttime = timer()
-    episodes, deaths = agent.train(env, config, 4, 6)
+    episodes, deaths = agent.train(env, config, 128, 1024)
     config.save()
     dt = timer() - starttime
     
@@ -44,12 +44,12 @@ def run():
 
     plt.draw()
     print(f"Finished training in {int(dt+1)} seconds, testing...")
-    seconds, death_list = env.test(config.get(), True, 'media/AC2vsLSTM.gif')
+    seconds, death_list = env.test(config.get(), True, f'media/{config.label}.gif')
     print(f'Alive for {int(seconds)} seconds')
     print('Died:')
     print(death_list)
     env.close()
-    plt.savefig('media/training_history.png', bbox_inches='tight')
+    plt.savefig(f'media/{config.label}.png', bbox_inches='tight')
     plt.show()
 
 
