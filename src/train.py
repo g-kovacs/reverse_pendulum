@@ -17,12 +17,15 @@ def run():
     config = Models.ModelConfiguration([
         #Models.SimpleAC(num_actions=DCPEnv.actions_size),
         Models.SimpleAC2(num_actions=DCPEnv.actions_size),
-        Models.LSTMModel(num_actions=DCPEnv.actions_size),
-    ], 'AC2vsLSTM')
+        Models.SimpleAC2(num_actions=DCPEnv.actions_size),
+        #Models.LSTMModel(num_actions=DCPEnv.actions_size,memory_size=2),
+    ], 'AC2vsAC2_64_0.01x2')
     env = DCPEnv(num_cars=config.num, buffer_size=config.window_size)
-    agent = A2CAgent()
+    agent = A2CAgent(lr=1e-2)
     starttime = timer()
-    episodes, deaths = agent.train(env, config, 2, 1)
+    batch_size = 64
+    sample_count = 128000
+    episodes, deaths = agent.train(env, config, batch_size, sample_count//batch_size)
     config.save()
     dt = timer() - starttime
     

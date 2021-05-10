@@ -42,7 +42,6 @@ class A2CAgent:
         for model in models:
             model.compile(optimizer=ko.RMSprop(lr=self.lr),
                     loss=[self._logits_loss, self._value_loss])
-        model_num = len(models)
         # Storage helpers for a single batch of data.
         actions = np.empty((batch_size, config.num), dtype=np.int32)
         rewards, dones, values = np.empty((3, batch_size, config.num))
