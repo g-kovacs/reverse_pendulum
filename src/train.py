@@ -22,7 +22,7 @@ def run():
     env = DCPEnv(num_cars=config.num, buffer_size=config.window_size)
     agent = A2CAgent()
     starttime = timer()
-    episodes, deaths = agent.train(env, config, 128, 1000)
+    episodes, deaths = agent.train(env, config, 128, 2)
     dt = timer() - starttime
     
     fig = plt.figure()
@@ -43,11 +43,12 @@ def run():
 
     plt.draw()
     print(f"Finished training in {int(dt+1)} seconds, testing...")
-    seconds, death_list = env.test(config.get(), True, 'ACvsAC2.gif')
+    seconds, death_list = env.test(config.get(), True, 'media/AC2vsLSTM.gif')
     print(f'Alive for {int(seconds)} seconds')
     print('Died:')
     print(death_list)
     env.close()
+    plt.savefig('media/training_history.png', bbox_inches='tight')
     plt.show()
 
 

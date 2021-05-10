@@ -38,7 +38,7 @@ class A2CAgent:
         # Here signs are flipped because the optimizer minimizes.
         return policy_loss - self.entropy_c * entropy_loss
 
-    def train(self, env, config, batch_size=128, updates=500):
+    def train(self, env, config, batch_size=128, updates=500, max_step = 300):
         models = config.get()
         for model in models:
             model.compile(optimizer=ko.RMSprop(lr=self.lr),
@@ -63,7 +63,7 @@ class A2CAgent:
                 for m_i, model in enumerate(models):
                     actions[step, m_i], values[step, m_i] = model.action_value(obs_window)
                 obs_window, rewards[step], dones[step] = env.step(actions[step])
-                if any(dones[step]):
+                if any(dones[step]) or max_step < steps:
                     obs_window = env.reset()
                     episodes.append(steps*env.dt)
                     steps = 0
