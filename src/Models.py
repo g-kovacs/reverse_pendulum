@@ -17,14 +17,13 @@ class ModelConfiguration:
     def num(self):
         return len(self.__models)
 
-    def __init__(self, models, label=None):
-        
+    def __init__(self, models, label_extend=None):
+
         if not isinstance(models, (collections.Sequence, np.ndarray)):
             models = [models]
-        if label is None:
-            self.label = 'vs'.join([model.label for model in models])
-        else:
-            self.label = label
+        self.label = 'vs'.join([model.label for model in models])
+        if isinstance(label_extend, tuple):
+            self.label = '.'.join(self.label, f'b{label_extend[0]}', f'u{label_extend[1]}')
         self.__models = models
 
     def get(self):
@@ -78,9 +77,9 @@ class ModelConfiguration:
                     m = cls_(*tuple([DCPEnv.actions_size, *d.values()]))
                     m.compile()
                     m.load_weights(os.path.join(os.getcwd(),
-                                    cfg_name,
-                                    name.strip('\n'),
-                                    'save_data')).expect_partial()
+                                                cfg_name,
+                                                name.strip('\n'),
+                                                'save_data')).expect_partial()
                     models.append(m)
         os.chdir("..")
         return cls(models, cfg_name)
@@ -122,8 +121,10 @@ class CNNModel(BaseModel):
         self.norm = kl.BatchNormalization()
         self.activation = kl.ReLU()
         self.flatten = kl.Flatten()
-        self.actor = kl.Dense(64, activation='relu', kernel_initializer='he_normal')
-        self.critic = kl.Dense(64, activation='relu', kernel_initializer='he_normal')
+        self.actor = kl.Dense(64, activation='relu',
+                              kernel_initializer='he_normal')
+        self.critic = kl.Dense(64, activation='relu',
+                               kernel_initializer='he_normal')
 
         self.value = kl.Dense(1, name='value')
         self.logits = kl.Dense(num_actions, name='policy_logits')
@@ -146,8 +147,10 @@ class LSTMModel(BaseModel):
         print('lstm: ', num_actions, name, memory_size, args)
         super().__init__(name, memory_size)
         self.lstm = kl.LSTM(16)
-        self.actor = kl.Dense(64, activation='relu', kernel_initializer='he_normal')
-        self.critic = kl.Dense(64, activation='relu', kernel_initializer='he_normal')
+        self.actor = kl.Dense(64, activation='relu',
+                              kernel_initializer='he_normal')
+        self.critic = kl.Dense(64, activation='relu',
+                               kernel_initializer='he_normal')
 
         self.value = kl.Dense(1, name='value')
         self.logits = kl.Dense(num_actions, name='policy_logits')
@@ -166,8 +169,10 @@ class SimpleAC2(BaseModel):
     def __init__(self, num_actions, name='SimpleAC2', *args):
         super().__init__(name)
 
-        self.actor = kl.Dense(128, activation='relu', kernel_initializer='he_normal')
-        self.critic = kl.Dense(128, activation='relu', kernel_initializer='he_normal')
+        self.actor = kl.Dense(128, activation='relu',
+                              kernel_initializer='he_normal')
+        self.critic = kl.Dense(128, activation='relu',
+                               kernel_initializer='he_normal')
 
         self.value = kl.Dense(1, name='value')
         self.logits = kl.Dense(num_actions, name='policy_logits')
@@ -184,9 +189,12 @@ class SimpleAC(BaseModel):
     def __init__(self, num_actions, name='SimpleAC', *args):
         super().__init__(name)
 
-        self.decoder = kl.Dense(64, activation='relu', kernel_initializer='he_normal')
-        self.actor = kl.Dense(32, activation='relu', kernel_initializer='he_normal')
-        self.critic = kl.Dense(32, activation='relu', kernel_initializer='he_normal')
+        self.decoder = kl.Dense(64, activation='relu',
+                                kernel_initializer='he_normal')
+        self.actor = kl.Dense(32, activation='relu',
+                              kernel_initializer='he_normal')
+        self.critic = kl.Dense(32, activation='relu',
+                               kernel_initializer='he_normal')
 
         self.value = kl.Dense(1, name='value')
         self.logits = kl.Dense(num_actions, name='policy_logits')

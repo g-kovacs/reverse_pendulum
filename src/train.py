@@ -17,8 +17,8 @@ train.py usage
 
 Models, registered from left to right in order of calling:
 
-    --lstm <mem_size>:  LSTMModel with specified window size
-    --cnn <mem_size>:   CNNModel with specified window size
+    --lstm [mem_size]:  LSTMModel with specified window size
+    --cnn [mem_size]:   CNNModel with specified window size
     --simple:           SimpleAC model
     --simple2:          SimpleAC2 model
 """
@@ -29,7 +29,7 @@ def run(models, batch, sample):
     env = DCPEnv(num_cars=config.num, buffer_size=config.window_size)
     agent = A2CAgent(lr=1e-2)
     starttime = timer()
-    episodes, deaths = agent.train(env, config, bath, sample//batch)
+    episodes, deaths = agent.train(env, config, batch, sample//batch)
     config.save()
     dt = timer() - starttime
 
@@ -74,7 +74,7 @@ def main(argv):
 
     try:
         opts, args = getopt.getopt(
-            argv, 'hgb:s:', ['lstm=', 'cnn=', 'simple', 'simple2'])
+            argv, 'hgb:s:', ['lstm', 'cnn', 'simple', 'simple2'])
     except getopt.GetoptError:
         print(helpMSG)
         sys.exit(2)
@@ -91,10 +91,10 @@ def main(argv):
                 sample_count = int(arg)
             elif opt == '--lstm':
                 models.append(Models.LSTMModel(
-                    DCPEnv.actions_size, memory_size=int(arg)))
+                    DCPEnv.actions_size, memory_size=(int(arg) if arg else 8)))
             elif opt == '--cnn':
                 models.append(Models.CNNModel(
-                    DCPEnv.actions_size, memory_size=int(arg)))
+                    DCPEnv.actions_size, memory_size=(int(arg) if arg else 8)))
             elif opt == '--simple':
                 models.append(Models.SimpleAC(DCPEnv.actions_size))
             elif opt == '--simple2':
