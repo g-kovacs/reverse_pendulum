@@ -117,6 +117,7 @@ class BaseModel(tf.keras.Model):
 class CNNModel(BaseModel):
     def __init__(self, num_actions, name='CNNModel', memory_size=8, *args):
         super().__init__(name, memory_size)
+        self.label = '_'.join([self.label, f'mem{memory_size}'])
         self.cnn = kl.Conv1D(filters=2, kernel_size=4)
         self.norm = kl.BatchNormalization()
         self.activation = kl.ReLU()
@@ -146,6 +147,7 @@ class LSTMModel(BaseModel):
     def __init__(self, num_actions, name='LSTMModel', memory_size=8, *args):
         print('lstm: ', num_actions, name, memory_size, args)
         super().__init__(name, memory_size)
+        self.label = '_'.join([self.label, f'mem{memory_size}'])
         self.lstm = kl.LSTM(16)
         self.actor = kl.Dense(64, activation='relu',
                               kernel_initializer='he_normal')
