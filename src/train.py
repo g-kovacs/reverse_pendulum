@@ -22,7 +22,7 @@ def run():
     env = DCPEnv(num_cars=config.num, buffer_size=config.window_size)
     agent = A2CAgent()
     starttime = timer()
-    episodes, deaths = agent.train(env, config, 128, 1024)
+    episodes, deaths = agent.train(env, config, 2, 1)
     config.save()
     dt = timer() - starttime
     
