@@ -11,11 +11,7 @@ from DCPEnv import DCPEnv
 class ModelConfiguration:
     @property
     def window_size(self):
-        max_window = 1
-        for m in self.__models:
-            if m.input_size > max_window:
-                max_window = m.input_size
-        return max_window
+        return max([m.input_size for m in self.__models])
 
     @property
     def num(self):
