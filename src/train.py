@@ -12,17 +12,20 @@ train.py usage
     -h:     Prints this message
     -g:     Use GPU for calculations (default is CPU)
 """
+batch_update = (256, 300)
+cfg_name = '.'.join(['AC2vsLSTM', 'b'+str(batch_update[0]), 'u'+str(batch_update[1])]
+
 
 def run():
     config = Models.ModelConfiguration([
         #Models.SimpleAC(num_actions=DCPEnv.actions_size),
         Models.SimpleAC2(num_actions=DCPEnv.actions_size),
         Models.LSTMModel(num_actions=DCPEnv.actions_size),
-    ], 'AC2vsLSTM')
+    ], cfg_name)
     env = DCPEnv(num_cars=config.num, buffer_size=config.window_size)
     agent = A2CAgent()
     starttime = timer()
-    episodes, deaths = agent.train(env, config, 2, 1)
+    episodes, deaths = agent.train(env, config, *batch_update)
     config.save()
     dt = timer() - starttime
     
