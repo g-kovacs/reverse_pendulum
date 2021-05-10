@@ -109,7 +109,7 @@ class DCPEnv(gym.Env):
 
     def _collision_detect(self, left, right):
         if abs(left.c_X - right.c_X) < DCPEnv.car_width:
-            push = (left.c_X - right.c_X) * DCPEnv.dt / 2
+            push = (DCPEnv.car_width - abs(left.c_X - right.c_X)) / 2
             left.c_X -= push
             right.c_X += push
             left.c_dX, right.c_dX = right.c_dX, left.c_dX

@@ -24,8 +24,8 @@ class CarRenderer(rendering.Viewer):
         def RANDOM():
             return Color(uniform(size=3), uniform(size=3))
 
-    def __init__(self, s_width=600, s_height=400, data_dict={}):
-        self.dims = data_dict
+    def __init__(self, s_width=600, s_height=400, data_dict=None):
+        self.dims = data_dict if data_dict is not None else {}
         wW = self.dims.pop("wW")
         self.dims.update((x, y * s_width/wW)
                          for x, y in self.dims.items())

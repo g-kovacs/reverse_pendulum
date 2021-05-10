@@ -4,7 +4,7 @@ from DCPEnv import DCPEnv
 import Models
 from agent import A2CAgent
 import sys, getopt
-from os import environ
+import os
 from timeit import default_timer as timer
 
 helpMSG = """
@@ -12,30 +12,34 @@ train.py usage
     -h:     Prints this message
     -g:     Use GPU for calculations (default is CPU)
 """
+batch_update = (256, 300)
+cfg_name = '.'.join(['AC2vsLSTM', 'b'+str(batch_update[0]), 'u'+str(batch_update[1])]
+
 
 def run():
     config = Models.ModelConfiguration([
         #Models.SimpleAC(num_actions=DCPEnv.actions_size),
         Models.SimpleAC2(num_actions=DCPEnv.actions_size),
         Models.LSTMModel(num_actions=DCPEnv.actions_size),
-    ], 'AC2vsLSTM')
+    ], cfg_name)
     env = DCPEnv(num_cars=config.num, buffer_size=config.window_size)
     agent = A2CAgent()
     starttime = timer()
-    episodes, deaths = agent.train(env, config, 128, 1024)
+    episodes, deaths = agent.train(env, config, *batch_update)
     config.save()
     dt = timer() - starttime
     
     fig = plt.figure()
     if(len(deaths)>1):
-        ax = fig.add_subplot(121)
+        spec = fig.add_gridspec(ncols=2, nrows=1, width_ratios=[1,4])
+        ax = fig.add_subplot(spec[0])
         ax.set_title("Death Counts")
         ax.pie(list(deaths.values()),
                     labels=list(deaths.keys()),
                     explode=[0.1]*config.num,
                     shadow=True,
                     autopct=lambda p : f'{int(p * sum(deaths.values())/100)}')
-        ax = fig.add_subplot(122)
+        ax = fig.add_subplot(spec[1])
     else:
         ax = fig.add_subplot(111)
     ax.set_title("Training history")
@@ -44,6 +48,8 @@ def run():
 
     plt.draw()
     print(f"Finished training in {int(dt+1)} seconds, testing...")
+    if not os.path.exists('media'):
+            os.makedirs('media')
     seconds, death_list = env.test(config.get(), True, f'media/{config.label}.gif')
     print(f'Alive for {int(seconds)} seconds')
     print('Died:')
@@ -56,7 +62,7 @@ def run():
 def main(argv):
     mpl.rcParams['toolbar'] = 'None'
 
-    environ['CUDA_VISIBLE_DEVICES'] = '-1'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
     try:
         opts, args = getopt.getopt(argv, 'hg')
@@ -68,7 +74,7 @@ def main(argv):
             print(helpMSG)
             sys.exit()
         elif opt == "-g":
-            environ.pop('CUDA_VISIBLE_DEVICES')
+            os.environ.pop('CUDA_VISIBLE_DEVICES')
     run()
 
 
