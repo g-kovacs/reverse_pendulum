@@ -4,9 +4,7 @@ import numpy as np
 import collections
 import os
 from shutil import make_archive, rmtree, unpack_archive
-from agent import A2CAgent
 from ast import literal_eval
-import importlib
 from DCPEnv import DCPEnv
 
 
@@ -51,8 +49,7 @@ class ModelConfiguration:
             save_path = os.path.join(dict_path, name)
             if not os.path.exists(save_path):
                 os.makedirs(save_path)
-            model.save_weights(os.path.join(
-                save_path, 'save_data'))
+            model.save_weights(os.path.join(save_path, 'save_data'))
             configs.append(str(model.get_config()))
             model_names.append(name)
         with open(os.path.join(dict_path, 'config'), 'w') as cfg_file:
@@ -80,9 +77,8 @@ class ModelConfiguration:
                     cls_ = getattr(__import__(__name__), d['class'])
                     m = cls_(*tuple([DCPEnv.actions_size, *d.values()]))
                     m.compile()
-                    m.load_weights(os.path.join(os.getcwd(),cfg_name, name, 'save_data')).expect_partial()
+                    m.load_weights(os.path.join(os.getcwd(),cfg_name, name.strip('\n'), 'save_data')).expect_partial()
                     models.append(m)
-        rmtree(cfg_name)
         os.chdir("..")
         return cls(models, cfg_name)
 
@@ -146,6 +142,7 @@ class CNNModel(BaseModel):
 
 class LSTMModel(BaseModel):
     def __init__(self, num_actions, name='LSTMModel', memory_size=8, *args):
+        print('lstm: ', num_actions, name, memory_size, args)
         super().__init__(name, memory_size)
         self.lstm = kl.LSTM(16)
         self.actor = kl.Dense(64, activation='relu',
