@@ -21,9 +21,9 @@ Arra figyeljetek, hogy a használni kívánt Python verzióval futtassátok a vi
 
 ### Telepítés
 
-TL;DR: install majd run PS szkriptek futtatása
+TL;DR: install PS szkript futtatása
 
 Manuálisan felrakni a virtualenvet és készíteni egy 'env' nevű környezetet. Ott telepíteni a függőségeket, majd az aktiválás </br>
-után a \src mappában a run.py szkriptet kell futtatni.
+után a \src mappában a train.py és/vagy test.py szkriptet kell futtatni.
 
 
