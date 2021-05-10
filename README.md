@@ -25,5 +25,3 @@ TL;DR: install PS szkript futtatása
 
 Manuálisan felrakni a virtualenvet és készíteni egy 'env' nevű környezetet. Ott telepíteni a függőségeket, majd az aktiválás </br>
 után a \src mappában a train.py és/vagy test.py szkriptet kell futtatni.
-
-

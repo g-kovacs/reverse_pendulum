@@ -2,7 +2,6 @@ import tensorflow as tf
 import tensorflow.keras.losses as kls
 import tensorflow.keras.optimizers as ko
 import numpy as np
-import collections
 
 class A2CAgent:
     def __init__(self, lr=7e-3, gamma=0.99, value_c=0.5, entropy_c=1e-4):
@@ -79,7 +78,7 @@ class A2CAgent:
                 # A trick to input actions and advantages through same API.
                 acts_and_advs = np.concatenate([actions[:,m_i, None], advs[:, None]], axis=-1)
                 model.train_on_batch(observations[:,-model.input_size:,:], [acts_and_advs, returns])
-        return episodes, deaths
+        return episodes, deaths    
 
     def _returns_advantages(self, rewards, dones, values, next_value):
         # `next_value` is the bootstrap value estimate of the future state (critic).
