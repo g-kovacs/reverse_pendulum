@@ -74,21 +74,22 @@ class DCPEnv(gym.Env):
 
             self.p_dG += DCPEnv.dt * p_ddG
             self.p_G += DCPEnv.dt * self.p_dG
-    
+
     actions_size = 7
 
     def __init__(self, num_cars=1, time_step=0.1, buffer_size=1):
         DCPEnv.maxX = (1 + num_cars) / 2 * DCPEnv.carDist
-        self.observations_size = len(dataclasses.fields(DCPEnv.State)) * num_cars
+        self.observations_size = len(
+            dataclasses.fields(DCPEnv.State)) * num_cars
         DCPEnv.dt = time_step
         self.viewer = None
         self.render_data = {"wW": self.maxX * 2, "pW": self.mP / self.lenP,
                             "pL": self.lenP, "cW": self.car_width, "wR": self.radW}
         self.num_cars = num_cars
         self.buffer_size = buffer_size
-    
+
     def _register_observation(self, observation):
-        self.buffer = np.roll(self.buffer,-1,axis=0)
+        self.buffer = np.roll(self.buffer, -1, axis=0)
         self.buffer[-1] = observation
         return self.buffer
 
@@ -109,7 +110,7 @@ class DCPEnv(gym.Env):
 
     def _collision_detect(self, left, right):
         if abs(left.c_X - right.c_X) < DCPEnv.car_width:
-            push = (left.c_X - right.c_X) * DCPEnv.dt / 2
+            push = (DCPEnv.car_width - abs(left.c_X - right.c_X)) / 2
             left.c_X -= push
             right.c_X += push
             left.c_dX, right.c_dX = right.c_dX, left.c_dX
@@ -119,7 +120,8 @@ class DCPEnv(gym.Env):
     def step(self, actions):
         terminates = [False] * self.num_cars
         for state, action, i in zip(self.states, actions, range(self.num_cars)):
-            torque = np.linspace(-self.maxT, self.maxT, DCPEnv.actions_size)[action]
+            torque = np.linspace(-self.maxT, self.maxT,
+                                 DCPEnv.actions_size)[action]
 
             if np.random.random() < 1e-4:
                 t = np.random.standard_normal() * 0.2
@@ -168,7 +170,7 @@ class DCPEnv(gym.Env):
             self._save_gif(frames, gif_path)
         death_list = {}
         for model, dead in zip(models, deaths):
-              death_list[model.label] = dead
+            death_list[model.label] = dead
         return steps*DCPEnv.dt, death_list
 
     def render(self, mode):

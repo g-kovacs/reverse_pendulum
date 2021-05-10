@@ -3,6 +3,7 @@ import tensorflow.keras.losses as kls
 import tensorflow.keras.optimizers as ko
 import numpy as np
 
+
 class A2CAgent:
     def __init__(self, lr=7e-3, gamma=0.99, value_c=0.5, entropy_c=1e-4):
         # `gamma` is the discount factor
@@ -37,7 +38,7 @@ class A2CAgent:
         # Here signs are flipped because the optimizer minimizes.
         return policy_loss - self.entropy_c * entropy_loss
 
-    def train(self, env, config, batch_size=128, updates=500, max_step = 300):
+    def train(self, env, config, batch_size=128, updates=500, max_step=300):
         models = config.get()
         for model in models:
             model.compile(optimizer=ko.RMSprop(lr=self.lr),
@@ -70,14 +71,14 @@ class A2CAgent:
                             deaths[model.label] += 1
             for m_i, model in enumerate(models):
                 _, next_value = model.action_value(obs_window)
-                returns, advs = self._returns_advantages(rewards[:,m_i],
-                                                        dones[:,m_i],
-                                                        values[:,m_i],
-                                                        next_value)
+                returns, advs = self._returns_advantages(rewards[:, m_i],
+                                                         dones[:, m_i],
+                                                         values[:, m_i],
+                                                         next_value)
                 # A trick to input actions and advantages through same API.
-                acts_and_advs = np.concatenate([actions[:,m_i, None], advs[:, None]], axis=-1)
-                model.train_on_batch(observations[:,-model.input_size:,:], [acts_and_advs, returns])
-        return episodes, deaths    
+                acts_and_advs = np.concatenate([actions[:, m_i, None], advs[:, None]], axis=-1)
+                model.train_on_batch(observations[:, -model.input_size:, :], [acts_and_advs, returns])
+        return episodes, deaths
 
     def _returns_advantages(self, rewards, dones, values, next_value):
         # `next_value` is the bootstrap value estimate of the future state (critic).

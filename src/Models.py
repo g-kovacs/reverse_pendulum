@@ -31,7 +31,7 @@ class ModelConfiguration:
         return self.__models
 
     def clean(self):
-        rmtree(os.path.join('saves',self.label))
+        rmtree(os.path.join('saves', self.label))
 
     def save(self):
         configs = []
@@ -77,7 +77,8 @@ class ModelConfiguration:
                     cls_ = getattr(__import__(__name__), d['class'])
                     m = cls_(*tuple([DCPEnv.actions_size, *d.values()]))
                     m.compile()
-                    m.load_weights(os.path.join(os.getcwd(),cfg_name, name.strip('\n'), 'save_data')).expect_partial()
+                    m.load_weights(os.path.join(os.getcwd(), cfg_name, name.strip(
+                        '\n'), 'save_data')).expect_partial()
                     models.append(m)
         os.chdir("..")
         return cls(models, cfg_name)
