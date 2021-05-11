@@ -208,3 +208,44 @@ class SimpleAC(BaseModel):
         hidden_logits = self.actor(features)
         hidden_values = self.critic(features)
         return self.logits(hidden_logits), self.value(hidden_values)
+
+
+class GRUModel(BaseModel):
+    def __init__(self, num_actions, name='GRUModel', memory_size=8, *args):
+        print('lstm: ', num_actions, name, memory_size, args)
+        super().__init__(name, memory_size)
+        self.gru = kl.GRU(32)
+        self.actor = kl.Dense(32, activation='relu', kernel_initializer='he_normal')
+        self.critic = kl.Dense(32, activation='relu', kernel_initializer='he_normal')
+
+        self.value = kl.Dense(1, name='value')
+        self.logits = kl.Dense(num_actions, name='policy_logits')
+
+    def call(self, inputs, **kwargs):
+        x = tf.convert_to_tensor(inputs)
+        # Decoder
+        features = self.gru(x)
+        # Actor-Critic
+        hidden_logits = self.actor(features)
+        hidden_values = self.critic(features)
+        return self.logits(hidden_logits), self.value(hidden_values)
+
+class RNNModel(BaseModel):
+    def __init__(self, num_actions, name='RNNModel', memory_size=8, *args):
+        print('lstm: ', num_actions, name, memory_size, args)
+        super().__init__(name, memory_size)
+        self.rnn = kl.SimpleRNN(32)
+        self.actor = kl.Dense(32, activation='relu', kernel_initializer='he_normal')
+        self.critic = kl.Dense(32, activation='relu', kernel_initializer='he_normal')
+
+        self.value = kl.Dense(1, name='value')
+        self.logits = kl.Dense(num_actions, name='policy_logits')
+
+    def call(self, inputs, **kwargs):
+        x = tf.convert_to_tensor(inputs)
+        # Decoder
+        features = self.rnn(x)
+        # Actor-Critic
+        hidden_logits = self.actor(features)
+        hidden_values = self.critic(features)
+        return self.logits(hidden_logits), self.value(hidden_values)

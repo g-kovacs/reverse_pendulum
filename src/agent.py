@@ -3,6 +3,8 @@ import tensorflow.keras.losses as kls
 import tensorflow.keras.optimizers as ko
 import numpy as np
 
+from tools import ProgressBar
+
 
 class A2CAgent:
     def __init__(self, lr=7e-3, gamma=0.99, value_c=0.5, entropy_c=1e-4):
@@ -55,9 +57,14 @@ class A2CAgent:
         obs_window = env.reset()
         episodes = []
         steps = 0
+        pb = ProgressBar(f'{config.label}')
+        total_progress = updates*batch_size
+        progress = 0
+        pb.reset()
         for _ in range(updates):
             for step in range(batch_size):
                 steps += 1
+                progress += 1
                 observations[step] = obs_window
                 for m_i, model in enumerate(models):
                     actions[step, m_i], values[step, m_i] = model.action_value(obs_window)
@@ -69,6 +76,7 @@ class A2CAgent:
                     for dead, model in zip(dones[step], models):
                         if dead:
                             deaths[model.label] += 1
+            losses = []
             for m_i, model in enumerate(models):
                 _, next_value = model.action_value(obs_window)
                 returns, advs = self._returns_advantages(rewards[:, m_i],
@@ -77,7 +85,9 @@ class A2CAgent:
                                                          next_value)
                 # A trick to input actions and advantages through same API.
                 acts_and_advs = np.concatenate([actions[:, m_i, None], advs[:, None]], axis=-1)
-                model.train_on_batch(observations[:, -model.input_size:, :], [acts_and_advs, returns])
+                loss = model.train_on_batch(observations[:, -model.input_size:, :], [acts_and_advs, returns])
+                losses.append(loss[0])
+            pb(progress/total_progress,f' loss: {sum(losses)/len(losses):6.3f}')
         return episodes, deaths
 
     def _returns_advantages(self, rewards, dones, values, next_value):

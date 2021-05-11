@@ -6,7 +6,6 @@ from agent import A2CAgent
 import sys
 import getopt
 import os
-from timeit import default_timer as timer
 
 helpMSG = """
 train.py usage
@@ -28,10 +27,8 @@ def run(models, batch, sample):
     config = Models.ModelConfiguration(models, (batch, sample/batch))
     env = DCPEnv(num_cars=config.num, buffer_size=config.window_size)
     agent = A2CAgent(lr=1e-2)
-    starttime = timer()
     episodes, deaths = agent.train(env, config, batch, sample//batch)
     config.save()
-    dt = timer() - starttime
 
     fig = plt.figure(figsize=(16.0, 8.0))
     if(len(deaths) > 1):
@@ -51,7 +48,6 @@ def run(models, batch, sample):
     ax.set(xlabel='episodes', ylabel='seconds')
 
     plt.draw()
-    print(f"Finished training in {int(dt+1)} seconds, testing...")
     if not os.path.exists('media'):
         os.makedirs('media')
     seconds, death_list = env.test(
