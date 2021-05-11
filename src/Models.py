@@ -147,7 +147,6 @@ class CNNModel(BaseModel):
 
 class LSTMModel(BaseModel):
     def __init__(self, num_actions, name='LSTMModel', memory_size=8, *args):
-        print('lstm: ', num_actions, name, memory_size, args)
         super().__init__(name, memory_size)
         self.label = '_'.join([self.label, f'mem{memory_size}'])
         self.lstm = kl.LSTM(16)
@@ -214,7 +213,6 @@ class SimpleAC(BaseModel):
 
 class GRUModel(BaseModel):
     def __init__(self, num_actions, name='GRUModel', memory_size=8, *args):
-        print('gru: ', num_actions, name, memory_size, args)
         super().__init__(name, memory_size)
         self.label = '_'.join([self.label, f'mem{memory_size}'])
         self.gru = kl.GRU(32)
@@ -235,7 +233,6 @@ class GRUModel(BaseModel):
 
 class RNNModel(BaseModel):
     def __init__(self, num_actions, name='RNNModel', memory_size=8, *args):
-        print('rnn: ', num_actions, name, memory_size, args)
         super().__init__(name, memory_size)
         self.label = '_'.join([self.label, f'mem{memory_size}'])
         self.rnn = kl.SimpleRNN(32)
