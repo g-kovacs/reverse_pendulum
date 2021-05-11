@@ -51,7 +51,7 @@ class DCPEnv(gym.Env):
                 x + s * n for x, s, n in zip(self.flatten(), scale, noise))
             return self
 
-        def tilt_pole(self, F):
+        def add_force(self, F):
             sinG = np.sin(self.p_G)
             cosG = np.cos(self.p_G)
 
@@ -59,20 +59,7 @@ class DCPEnv(gym.Env):
                   sinG) / DCPEnv.mTot
             _b = (4/3 - DCPEnv.mP * (cosG ** 2) / DCPEnv.mTot)
 
-            ddG = (DCPEnv.g * sinG + cosG * _a) / (0.5 * DCPEnv.lenP * _b)
-
-            self.p_dG += DCPEnv.dt * ddG
-            self.p_G += DCPEnv.dt * self.p_dG
-            return ddG
-
-        def add_torque(self, torque):
-            F = (2.0*torque - DCPEnv.coefR *
-                 DCPEnv.mTot * DCPEnv.g/2.0)/DCPEnv.radW
-
-            sinG = np.sin(self.p_G)
-            cosG = np.cos(self.p_G)
-
-            p_ddG = self.tilt_pole(F)
+            p_ddG = (DCPEnv.g * sinG + cosG * _a) / (0.5 * DCPEnv.lenP * _b)
 
             _c = (self.p_dG ** 2) * sinG - \
                 p_ddG * cosG
@@ -80,6 +67,8 @@ class DCPEnv(gym.Env):
 
             self.c_dX += DCPEnv.dt * c_ddX
             self.c_X += DCPEnv.dt * self.c_dX
+            self.p_dG += DCPEnv.dt * p_ddG
+            self.p_G += DCPEnv.dt * self.p_dG
 
     actions_size = 7
 
@@ -120,13 +109,13 @@ class DCPEnv(gym.Env):
             left.c_X -= push
             right.c_X += push
 
-            mom = [left.c_dX, right.c_dX]
+            mom = [left.c_dX * DCPEnv.mC, right.c_dX * DCPEnv.mC]
             mom_switch = tuple([0.98 * m for m in reversed(mom)])
 
-            F = [(m2-m1) / DCPEnv.dt for m1, m2 in zip(mom, mom_switch)]
-            left.tilt_pole(F[0])
-            right.tilt_pole(F[1])
-            left.c_dX, right.c_dX = mom_switch
+            F = [(m2-m1) / DCPEnv.dt * .6 for m1, m2 in zip(mom, mom_switch)]
+            left.add_force(F[0])
+            right.add_force(F[1])
+            left.c_dX, right.c_dX = right.c_dX * .98, left.c_dX * .98
 
     # ==================================================
     # =================== STEP =========================
@@ -139,7 +128,9 @@ class DCPEnv(gym.Env):
             if np.random.random() < 1e-4:
                 t = np.random.standard_normal() * 0.2
                 state.wind_blow(np.random.choice([-t, t]))
-            state.add_torque(torque)
+            F = (2.0*torque - DCPEnv.coefR *
+                 DCPEnv.mTot * DCPEnv.g/2.0)/DCPEnv.radW
+            state.add_force(F)
 
             if abs(state.p_G) > self.maxG or abs(state.c_X) > self.maxX:
                 terminates[i] = True

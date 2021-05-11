@@ -51,12 +51,12 @@ def run(models, batch, sample):
     if not os.path.exists('media'):
         os.makedirs('media')
     seconds, death_list = env.test(
-        config.get(), False, f'media/{config.label}.gif')
+        config.get(), False, f'media/{config.label}/test.gif')
     print(f'Alive for {int(seconds)} seconds')
     print('Died:')
     print(death_list)
     env.close()
-    plt.savefig(f'media/{config.label}.png', bbox_inches='tight')
+    plt.savefig(f'media/{config.label}/train.png', bbox_inches='tight')
     plt.show()
 
 
