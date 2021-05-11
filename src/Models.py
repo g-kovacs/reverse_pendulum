@@ -23,7 +23,7 @@ class ModelConfiguration:
             models = [models]
         self.label = 'vs'.join([model.label for model in models])
         if isinstance(label_extend, tuple):
-            self.label = '.'.join([self.label, f'b{label_extend[0]}', f'u{label_extend[1]}'])
+            self.label = '.'.join([self.label, f'b{label_extend[0]}', f'u{int(label_extend[1])}'])
         self.__models = models
 
     def get(self):

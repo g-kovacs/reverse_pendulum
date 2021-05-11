@@ -33,7 +33,7 @@ def run(models, batch, sample):
     config.save()
     dt = timer() - starttime
 
-    fig = plt.figure()
+    fig = plt.figure(figsize=(16.0, 8.0))
     if(len(deaths) > 1):
         spec = fig.add_gridspec(ncols=2, nrows=1, width_ratios=[1, 4])
         ax = fig.add_subplot(spec[0])
@@ -55,7 +55,7 @@ def run(models, batch, sample):
     if not os.path.exists('media'):
         os.makedirs('media')
     seconds, death_list = env.test(
-        config.get(), True, f'media/{config.label}.gif')
+        config.get(), False, f'media/{config.label}.gif')
     print(f'Alive for {int(seconds)} seconds')
     print('Died:')
     print(death_list)
