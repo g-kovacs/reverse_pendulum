@@ -51,10 +51,7 @@ class DCPEnv(gym.Env):
                 x + s * n for x, s, n in zip(self.flatten(), scale, noise))
             return self
 
-        def add_torque(self, torque):
-            F = (2.0*torque - DCPEnv.coefR *
-                 DCPEnv.mTot * DCPEnv.g/2.0)/DCPEnv.radW
-
+        def tilt_pole(self, F):
             sinG = np.sin(self.p_G)
             cosG = np.cos(self.p_G)
 
@@ -62,8 +59,20 @@ class DCPEnv(gym.Env):
                   sinG) / DCPEnv.mTot
             _b = (4/3 - DCPEnv.mP * (cosG ** 2) / DCPEnv.mTot)
 
-            p_ddG = (DCPEnv.g * sinG + cosG * _a) \
-                / (0.5 * DCPEnv.lenP * _b)
+            ddG = (DCPEnv.g * sinG + cosG * _a) / (0.5 * DCPEnv.lenP * _b)
+
+            self.p_dG += DCPEnv.dt * ddG
+            self.p_G += DCPEnv.dt * self.p_dG
+            return ddG
+
+        def add_torque(self, torque):
+            F = (2.0*torque - DCPEnv.coefR *
+                 DCPEnv.mTot * DCPEnv.g/2.0)/DCPEnv.radW
+
+            sinG = np.sin(self.p_G)
+            cosG = np.cos(self.p_G)
+
+            p_ddG = self.tilt_pole(F)
 
             _c = (self.p_dG ** 2) * sinG - \
                 p_ddG * cosG
@@ -71,9 +80,6 @@ class DCPEnv(gym.Env):
 
             self.c_dX += DCPEnv.dt * c_ddX
             self.c_X += DCPEnv.dt * self.c_dX
-
-            self.p_dG += DCPEnv.dt * p_ddG
-            self.p_G += DCPEnv.dt * self.p_dG
 
     actions_size = 7
 
@@ -113,14 +119,22 @@ class DCPEnv(gym.Env):
             push = (DCPEnv.car_width - abs(left.c_X - right.c_X)) / 2
             left.c_X -= push
             right.c_X += push
-            left.c_dX, right.c_dX = right.c_dX, left.c_dX
+
+            mom = [left.c_dX, right.c_dX]
+            mom_switch = tuple([0.98 * m for m in reversed(mom)])
+
+            F = [(m2-m1) / DCPEnv.dt for m1, m2 in zip(mom, mom_switch)]
+            left.tilt_pole(F[0])
+            right.tilt_pole(F[1])
+            left.c_dX, right.c_dX = mom_switch
 
     # ==================================================
     # =================== STEP =========================
     def step(self, actions):
         terminates = [False] * self.num_cars
         for state, action, i in zip(self.states, actions, range(self.num_cars)):
-            torque = np.linspace(-self.maxT, self.maxT, DCPEnv.actions_size)[action]
+            torque = np.linspace(-self.maxT, self.maxT,
+                                 DCPEnv.actions_size)[action]
 
             if np.random.random() < 1e-4:
                 t = np.random.standard_normal() * 0.2
