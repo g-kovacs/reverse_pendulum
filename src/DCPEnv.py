@@ -112,10 +112,9 @@ class DCPEnv(gym.Env):
             mom = [left.c_dX * DCPEnv.mC, right.c_dX * DCPEnv.mC]
             mom_switch = tuple([0.98 * m for m in reversed(mom)])
 
-            F = [(m2-m1) / DCPEnv.dt * .6 for m1, m2 in zip(mom, mom_switch)]
+            F = [(m2-m1) / DCPEnv.dt for m1, m2 in zip(mom, mom_switch)]
             left.add_force(F[0])
             right.add_force(F[1])
-            left.c_dX, right.c_dX = right.c_dX * .98, left.c_dX * .98
 
     # ==================================================
     # =================== STEP =========================
