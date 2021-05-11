@@ -12,7 +12,7 @@ class ProgressBar():
         self.prev_progress = 1e-8
         self.start = timer()
 
-    def __call__(self, progress):
+    def __call__(self, progress, message=''):
         if progress < 0.0 or progress > 1.0:
             raise ValueError('progress must be between 0 and 1')
         if not self.finished:
@@ -28,9 +28,10 @@ class ProgressBar():
                 t = timer()
                 elapsed = t - self.start
                 time_left = elapsed/progress-elapsed
-                msg += f' Remaining: {time_left:8.1f} seconds'
+                msg += f' Remaining: {time_left:8.1f} s'
+            msg += message
             if round(progress*1000) == 1000:
-                spaces = ' '*43
+                spaces = ' '*50
                 elapsed = t - self.start
                 print(f'\rFinished {self.task} in {elapsed:.1f} seconds {spaces}')
                 self.finished = True

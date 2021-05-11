@@ -155,11 +155,10 @@ class DCPEnv(gym.Env):
         actions = np.empty(model_num, dtype=np.int32)
         steps = 0
         while not any(deaths):
+            if gif_path is not None:
+                frames.append(self.render(mode='rgb_array'))
             if render:
-                if gif_path is not None:
-                    frames.append(self.render(mode='rgb_array'))
-                else:
-                    self.render(mode='human')
+                self.render(mode='human')
 
             for m_i, model in enumerate(models):
                 actions[m_i], _ = model.action_value(obs_window)
