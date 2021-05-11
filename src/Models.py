@@ -212,8 +212,9 @@ class SimpleAC(BaseModel):
 
 class GRUModel(BaseModel):
     def __init__(self, num_actions, name='GRUModel', memory_size=8, *args):
-        print('lstm: ', num_actions, name, memory_size, args)
+        print('gru: ', num_actions, name, memory_size, args)
         super().__init__(name, memory_size)
+        self.label = '_'.join([self.label, f'mem{memory_size}'])
         self.gru = kl.GRU(32)
         self.actor = kl.Dense(32, activation='relu', kernel_initializer='he_normal')
         self.critic = kl.Dense(32, activation='relu', kernel_initializer='he_normal')
@@ -232,8 +233,9 @@ class GRUModel(BaseModel):
 
 class RNNModel(BaseModel):
     def __init__(self, num_actions, name='RNNModel', memory_size=8, *args):
-        print('lstm: ', num_actions, name, memory_size, args)
+        print('rnn: ', num_actions, name, memory_size, args)
         super().__init__(name, memory_size)
+        self.label = '_'.join([self.label, f'mem{memory_size}'])
         self.rnn = kl.SimpleRNN(32)
         self.actor = kl.Dense(32, activation='relu', kernel_initializer='he_normal')
         self.critic = kl.Dense(32, activation='relu', kernel_initializer='he_normal')

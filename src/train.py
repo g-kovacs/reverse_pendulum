@@ -70,7 +70,7 @@ def main(argv):
 
     try:
         opts, args = getopt.getopt(
-            argv, 'hgb:s:', ['lstm', 'cnn', 'simple', 'simple2'])
+            argv, 'hgb:s:', ['lstm', 'cnn', 'simple', 'simple2', 'rnn', 'gru'])
     except getopt.GetoptError:
         print(helpMSG)
         sys.exit(2)
@@ -95,6 +95,12 @@ def main(argv):
                 models.append(Models.SimpleAC(DCPEnv.actions_size))
             elif opt == '--simple2':
                 models.append(Models.SimpleAC2(DCPEnv.actions_size))
+            elif opt == '--gru':
+                models.append(Models.GRUModel(DCPEnv.actions_size,
+                              memory_size=(int(arg) if arg else 8)))
+            elif opt == '--rnn':
+                models.append(Models.RNNModel(DCPEnv.actions_size,
+                              memory_size=(int(arg) if arg else 8)))
     except Exception:
         print(helpMSG)
         sys.exit(2)
