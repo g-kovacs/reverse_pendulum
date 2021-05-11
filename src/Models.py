@@ -65,6 +65,8 @@ class ModelConfiguration:
     @classmethod
     def load(cls, cfg_name='default'):
         models = []
+        cfg_split = [s[1:] for s in cfg_name.split('.')]
+        label_extend = (int(cfg_split[1]), int(cfg_split[2]))
         os.chdir('saves')
         unpack_archive(filename='.'.join((cfg_name, 'zip')), format='zip')
         cfg_path = os.path.join(cfg_name, 'config')
@@ -82,7 +84,7 @@ class ModelConfiguration:
                                                 'save_data')).expect_partial()
                     models.append(m)
         os.chdir("..")
-        return cls(models, cfg_name)
+        return cls(models, label_extend)
 
 
 class BaseModel(tf.keras.Model):
