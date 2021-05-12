@@ -48,8 +48,8 @@ def run(models, batch, sample):
     ax.set(xlabel='episodes', ylabel='seconds')
 
     plt.draw()
-    if not os.path.exists('media'):
-        os.makedirs('media')
+    if not os.path.exists(f'media/{config.label}'):
+        os.makedirs(f'media/{config.label}')
     seconds, death_list = env.test(
         config.get(), False, f'media/{config.label}/test.gif')
     print(f'Alive for {int(seconds)} seconds')
@@ -70,7 +70,7 @@ def main(argv):
 
     try:
         opts, args = getopt.getopt(
-            argv, 'hgb:s:', ['lstm', 'cnn', 'simple', 'simple2', 'rnn', 'gru'])
+            argv, 'hgb:s:', ['lstm=', 'cnn=', 'simple', 'simple2', 'rnn=', 'gru='])
     except getopt.GetoptError:
         print(helpMSG)
         sys.exit(2)
