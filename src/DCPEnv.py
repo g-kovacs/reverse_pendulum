@@ -97,12 +97,6 @@ class DCPEnv(gym.Env):
     def _convert_states(self):
         return np.array(sum((astuple(s) for s in self.states), tuple()))
 
-    def _save_gif(self, frames, path):
-        size = frames[0].shape
-        with imageio.get_writer(path, mode='I') as writer:
-            for frame in frames:
-                writer.append_data(frame)
-
     def _collision_detect(self, left, right):
         if abs(left.c_X - right.c_X) < DCPEnv.car_width:
             push = (DCPEnv.car_width - abs(left.c_X - right.c_X)) / 2
@@ -150,7 +144,7 @@ class DCPEnv(gym.Env):
         self.buffer = np.array([state for _ in range(self.buffer_size)])
         return self.buffer
 
-    def test(self, models, render=True, gif_path=None):
+    def test(self, models, render=True, gif_path=None, max_seconds = 600, fps=10):
         if not isinstance(models, (collections.Sequence, np.ndarray)):
             models = np.array([models])
         model_num = len(models)
@@ -158,18 +152,23 @@ class DCPEnv(gym.Env):
         frames = []
         actions = np.empty(model_num, dtype=np.int32)
         steps = 0
+        dt = 0
         while not any(deaths):
-            if gif_path is not None:
-                frames.append(self.render(mode='rgb_array'))
-            if render:
-                self.render(mode='human')
-
             for m_i, model in enumerate(models):
                 actions[m_i], _ = model.action_value(obs_window)
             obs_window, _, deaths = self.step(actions)
             steps += 1
+            dt += DCPEnv.dt
+            if dt+1e-4 > 1./fps:
+                dt = 0
+                if gif_path is not None:
+                    frames.append(self.render(mode='rgb_array'))
+                if render:
+                    self.render(mode='human')
+            if steps*DCPEnv.dt > max_seconds:
+                break
         if len(frames) > 0:
-            self._save_gif(frames, gif_path)
+            imageio.mimsave(gif_path, frames, fps=fps)
         death_list = {}
         for model, dead in zip(models, deaths):
             death_list[model.label] = dead

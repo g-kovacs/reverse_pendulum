@@ -21,14 +21,16 @@ def run():
     config = Models.ModelConfiguration([
         # Models.SimpleAC(num_actions=DCPEnv.actions_size),
         #Models.SimpleAC2(num_actions=DCPEnv.actions_size),
-        Models.GRUModel(num_actions=DCPEnv.actions_size,memory_size=2),
-        Models.GRUModel(num_actions=DCPEnv.actions_size,memory_size=2),
-        #Models.LSTMModel(num_actions=DCPEnv.actions_size,memory_size=2),
-    ], 'GRUvsGRU_8_2_0.01x8')
-    env = DCPEnv(num_cars=config.num, buffer_size=config.window_size)
+        #Models.GRUModel(num_actions=DCPEnv.actions_size,memory_size=64),
+        Models.GRUModel(num_actions=DCPEnv.actions_size,memory_size=4),
+        #Models.GRUModel(num_actions=DCPEnv.actions_size,memory_size=2),
+        #Models.CNNModel(num_actions=DCPEnv.actions_size,memory_size=4),
+        #Models.LSTMModel(num_actions=DCPEnv.actions_size,memory_size=4),
+    ], 'testdt')
+    env = DCPEnv(num_cars=config.num, buffer_size=config.window_size, time_step=1e-2)
     agent = A2CAgent(lr=1e-2)
-    batch_size = 8
-    sample_count = 512000
+    batch_size = 16
+    sample_count = 4000
     episodes, deaths = agent.train(env, config, batch_size, sample_count//batch_size)
     config.save()
 
@@ -52,7 +54,7 @@ def run():
     plt.draw()
     if not os.path.exists('media'):
         os.makedirs('media')
-    seconds, death_list = env.test(config.get(), False, f'media/{config.label}.gif')
+    seconds, death_list = env.test(config.get(), False, 'media/test.gif')
     print(f'Alive for {int(seconds)} seconds')
     print('Died:')
     print(death_list)
