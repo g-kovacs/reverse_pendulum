@@ -23,9 +23,9 @@ Models, registered from left to right in order of calling:
 """
 
 
-def run(models, batch, sample):
+def run(models, batch, sample, timestep):
     config = Models.ModelConfiguration(models, (batch, sample/batch))
-    env = DCPEnv(num_cars=config.num, buffer_size=config.window_size)
+    env = DCPEnv(num_cars=config.num, buffer_size=config.window_size, time_step=timestep)
     agent = A2CAgent(lr=1e-2)
     episodes, deaths = agent.train(env, config, batch, sample//batch)
     config.save()
@@ -64,13 +64,14 @@ def main(argv):
     mpl.rcParams['toolbar'] = 'None'
     os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
-    batch_size = 128
-    sample_count = 32000
+    batch_size = 16
+    sample_count = 128000
+    time_step = 0.1
     models = []
 
     try:
         opts, args = getopt.getopt(
-            argv, 'hgb:s:', ['lstm=', 'cnn=', 'simple', 'simple2', 'rnn=', 'gru='])
+            argv, 'hgb:s:t:', ['lstm=', 'cnn=', 'simple', 'simple2', 'rnn=', 'gru='])
     except getopt.GetoptError:
         print(helpMSG)
         sys.exit(2)
@@ -85,6 +86,8 @@ def main(argv):
                 batch_size = int(arg)
             elif opt == '-s':
                 sample_count = int(arg)
+            elif opt == "-t":
+                time_step = float(arg)
             elif opt == '--lstm':
                 models.append(Models.LSTMModel(
                     DCPEnv.actions_size, memory_size=(int(arg) if arg else 8)))
@@ -110,7 +113,7 @@ def main(argv):
         print(helpMSG)
         sys.exit(2)
 
-    run(models, batch_size, sample_count)
+    run(models, batch_size, sample_count, time_step)
 
 
 if __name__ == "__main__":
