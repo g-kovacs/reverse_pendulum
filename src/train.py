@@ -24,7 +24,7 @@ Models, registered from left to right in order of calling:
 
 
 def run(models, batch, sample, timestep):
-    config = Models.ModelConfiguration(models, (batch, sample/batch))
+    config = Models.ModelConfiguration(models, (batch, sample/batch, timestep))
     env = DCPEnv(num_cars=config.num, buffer_size=config.window_size, time_step=timestep)
     agent = A2CAgent(lr=1e-2)
     episodes, deaths = agent.train(env, config, batch, sample//batch)

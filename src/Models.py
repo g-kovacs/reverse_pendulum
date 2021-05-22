@@ -6,6 +6,7 @@ import os
 from shutil import make_archive, rmtree, unpack_archive
 from ast import literal_eval
 from DCPEnv import DCPEnv
+from decimal import Decimal
 
 
 class ModelConfiguration:
@@ -23,7 +24,7 @@ class ModelConfiguration:
             models = [models]
         self.label = 'vs'.join([model.label for model in models])
         if isinstance(label_extend, tuple):
-            self.label = '.'.join([self.label, f'b{label_extend[0]}', f'u{int(label_extend[1])}'])
+            self.label = '_'.join([self.label, f'b{label_extend[0]}', f'u{int(label_extend[1])}', f't{Decimal(label_extend[2]):.1E}'])
         self.__models = models
 
     def get(self):
@@ -65,10 +66,10 @@ class ModelConfiguration:
     @classmethod
     def load(cls, cfg_name='default'):
         models = []
-        cfg_split = [s[1:] for s in cfg_name.split('.')]
-        label_extend = (int(cfg_split[1]), int(cfg_split[2]))
+        cfg_split = [s[1:] for s in cfg_name.split('_')]
+        label_extend = (int(cfg_split[1]), int(cfg_split[2]), float(cfg_split[3]))
         os.chdir('saves')
-        unpack_archive(filename='.'.join((cfg_name, 'zip')), format='zip')
+        unpack_archive(filename='_'.join((cfg_name, 'zip')), format='zip')
         cfg_path = os.path.join(cfg_name, 'config')
         names_path = os.path.join(cfg_name, 'names')
         with open(cfg_path, 'r') as cfg_file:
@@ -99,7 +100,7 @@ class BaseModel(tf.keras.Model):
         if name not in BaseModel.labels:
             BaseModel.labels[name] = 0
         BaseModel.labels[name] += 1
-        self.label = name + '_' + str(BaseModel.labels[name])
+        self.label = name + '-' + str(BaseModel.labels[name])
         self.input_size = input_size
         self.dist = BaseModel.ProbabilityDistribution()
 
@@ -119,7 +120,7 @@ class BaseModel(tf.keras.Model):
 class CNNModel(BaseModel):
     def __init__(self, num_actions, name='CNNModel', memory_size=8, *args):
         super().__init__(name, memory_size)
-        self.label = '_'.join([self.label, f'mem{memory_size}'])
+        self.label = '-'.join([self.label, f'mem{memory_size}'])
         self.cnn = kl.Conv1D(filters=2, kernel_size=4)
         self.norm = kl.BatchNormalization()
         self.activation = kl.ReLU()
@@ -148,7 +149,7 @@ class CNNModel(BaseModel):
 class LSTMModel(BaseModel):
     def __init__(self, num_actions, name='LSTMModel', memory_size=8, *args):
         super().__init__(name, memory_size)
-        self.label = '_'.join([self.label, f'mem{memory_size}'])
+        self.label = '-'.join([self.label, f'mem{memory_size}'])
         self.lstm = kl.LSTM(16)
         self.actor = kl.Dense(64, activation='relu',
                               kernel_initializer='he_normal')
@@ -214,7 +215,7 @@ class SimpleAC(BaseModel):
 class GRUModel(BaseModel):
     def __init__(self, num_actions, name='GRUModel', memory_size=8, *args):
         super().__init__(name, memory_size)
-        self.label = '_'.join([self.label, f'mem{memory_size}'])
+        self.label = '-'.join([self.label, f'mem{memory_size}'])
         self.gru = kl.GRU(32)
         self.actor = kl.Dense(32, activation='relu', kernel_initializer='he_normal')
         self.critic = kl.Dense(32, activation='relu', kernel_initializer='he_normal')
@@ -234,7 +235,7 @@ class GRUModel(BaseModel):
 class RNNModel(BaseModel):
     def __init__(self, num_actions, name='RNNModel', memory_size=8, *args):
         super().__init__(name, memory_size)
-        self.label = '_'.join([self.label, f'mem{memory_size}'])
+        self.label = '-'.join([self.label, f'mem{memory_size}'])
         self.rnn = kl.SimpleRNN(32)
         self.actor = kl.Dense(32, activation='relu', kernel_initializer='he_normal')
         self.critic = kl.Dense(32, activation='relu', kernel_initializer='he_normal')
