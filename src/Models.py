@@ -18,6 +18,10 @@ class ModelConfiguration:
     def num(self):
         return len(self.__models)
 
+    @property
+    def timestep(self):
+        return self.__time_step
+
     def __init__(self, models, label_extend=None):
 
         if not isinstance(models, (collections.Sequence, np.ndarray)):
@@ -26,6 +30,7 @@ class ModelConfiguration:
         if isinstance(label_extend, tuple):
             self.label = '_'.join([self.label, f'b{label_extend[0]}', f'u{int(label_extend[1])}', f't{Decimal(label_extend[2]):.1E}'])
         self.__models = models
+        self.__time_step = float(label_extend[2])
 
     def get(self):
         return self.__models
@@ -69,7 +74,7 @@ class ModelConfiguration:
         cfg_split = [s[1:] for s in cfg_name.split('_')]
         label_extend = (int(cfg_split[1]), int(cfg_split[2]), float(cfg_split[3]))
         os.chdir('saves')
-        unpack_archive(filename='_'.join((cfg_name, 'zip')), format='zip')
+        unpack_archive(filename='.'.join((cfg_name, 'zip')), format='zip')
         cfg_path = os.path.join(cfg_name, 'config')
         names_path = os.path.join(cfg_name, 'names')
         with open(cfg_path, 'r') as cfg_file:

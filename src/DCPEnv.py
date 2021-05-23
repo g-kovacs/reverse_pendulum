@@ -165,7 +165,7 @@ class DCPEnv(gym.Env):
                     frames.append(self.render(mode='rgb_array'))
                 if render:
                     self.render(mode='human')
-            if steps*DCPEnv.dt > max_seconds:
+            if steps*DCPEnv.dt >= max_seconds:
                 break
         if len(frames) > 0:
             imageio.mimsave(gif_path, frames, fps=fps)
