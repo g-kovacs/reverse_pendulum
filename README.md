@@ -23,5 +23,10 @@ A használni kívánt Python verzióval kell futtatni a virtualenvet és akkor a
 
 TL;DR: install PS szkript futtatása
 
-Manuálisan felrakni a virtualenvet és készíteni egy 'env' nevű környezetet. Ott telepíteni a függőségeket, majd az aktiválás </br>
-után a \src mappában a train.py és/vagy test.py szkriptet kell futtatni.
+Manuálisan felrakni a virtualenvet és készíteni egy 'env' nevű környezetet. Ott telepíteni a függőségeket, majd az aktiválás
+után a \src mappában a train.py és/vagy eval.py szkriptet kell futtatni.
+
+### Mentés és betöltés
+
+A konfigurációk mentése automatikusan történik a tanítás befejeztével. Minden konfiguráció a saves könyvtáron belülre egy tömörített állományba kerül. A konfiguráció (egyébként beszédes) neve a tanítás alatt többször is látható a parancsorban. </br>
+A betöltés és futtatás (még) nem megoldott parancssorból, ehhez az src/eval.py szkriptben szükséges a 'cfgName' változót frissíteni a betölteni kívánt konfiguráció nevére, majd a szkriptet futtatni.
