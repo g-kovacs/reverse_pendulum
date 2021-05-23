@@ -115,7 +115,6 @@ class BaseModel(tf.keras.Model):
             obs = obs[None, :]
         logits, value = self.predict_on_batch(obs)
         action = self.dist.predict_on_batch(logits)
-        # TODO test action shapes
         return np.squeeze(action, axis=-1), np.squeeze(value, axis=-1)
 
     def get_config(self):
@@ -215,7 +214,7 @@ class SimpleAC(BaseModel):
         hidden_logits = self.actor(features)
         hidden_values = self.critic(features)
         return self.logits(hidden_logits), self.value(hidden_values)
-
+      
 
 class GRUModel(BaseModel):
     def __init__(self, num_actions, name='GRUModel', memory_size=8, *args):
@@ -236,6 +235,7 @@ class GRUModel(BaseModel):
         hidden_logits = self.actor(features)
         hidden_values = self.critic(features)
         return self.logits(hidden_logits), self.value(hidden_values)
+      
 
 class RNNModel(BaseModel):
     def __init__(self, num_actions, name='RNNModel', memory_size=8, *args):
