@@ -51,10 +51,7 @@ class DCPEnv(gym.Env):
                 x + s * n for x, s, n in zip(self.flatten(), scale, noise))
             return self
 
-        def add_torque(self, torque):
-            F = (2.0*torque - DCPEnv.coefR *
-                 DCPEnv.mTot * DCPEnv.g/2.0)/DCPEnv.radW
-
+        def add_force(self, F):
             sinG = np.sin(self.p_G)
             cosG = np.cos(self.p_G)
 
@@ -62,8 +59,7 @@ class DCPEnv(gym.Env):
                   sinG) / DCPEnv.mTot
             _b = (4/3 - DCPEnv.mP * (cosG ** 2) / DCPEnv.mTot)
 
-            p_ddG = (DCPEnv.g * sinG + cosG * _a) \
-                / (0.5 * DCPEnv.lenP * _b)
+            p_ddG = (DCPEnv.g * sinG + cosG * _a) / (0.5 * DCPEnv.lenP * _b)
 
             _c = (self.p_dG ** 2) * sinG - \
                 p_ddG * cosG
@@ -71,7 +67,6 @@ class DCPEnv(gym.Env):
 
             self.c_dX += DCPEnv.dt * c_ddX
             self.c_X += DCPEnv.dt * self.c_dX
-
             self.p_dG += DCPEnv.dt * p_ddG
             self.p_G += DCPEnv.dt * self.p_dG
 
@@ -102,18 +97,18 @@ class DCPEnv(gym.Env):
     def _convert_states(self):
         return np.array(sum((astuple(s) for s in self.states), tuple()))
 
-    def _save_gif(self, frames, path):
-        size = frames[0].shape
-        with imageio.get_writer(path, mode='I') as writer:
-            for frame in frames:
-                writer.append_data(frame)
-
     def _collision_detect(self, left, right):
         if abs(left.c_X - right.c_X) < DCPEnv.car_width:
             push = (DCPEnv.car_width - abs(left.c_X - right.c_X)) / 2
             left.c_X -= push
             right.c_X += push
-            left.c_dX, right.c_dX = right.c_dX, left.c_dX
+
+            mom = [left.c_dX * DCPEnv.mC, right.c_dX * DCPEnv.mC]
+            mom_switch = tuple([0.98 * m for m in reversed(mom)])
+
+            F = [(m2-m1) / DCPEnv.dt for m1, m2 in zip(mom, mom_switch)]
+            left.add_force(F[0])
+            right.add_force(F[1])
 
     # ==================================================
     # =================== STEP =========================
@@ -126,7 +121,9 @@ class DCPEnv(gym.Env):
             if np.random.random() < 1e-4:
                 t = np.random.standard_normal() * 0.2
                 state.wind_blow(np.random.choice([-t, t]))
-            state.add_torque(torque)
+            F = (2.0*torque - DCPEnv.coefR *
+                 DCPEnv.mTot * DCPEnv.g/2.0)/DCPEnv.radW
+            state.add_force(F)
 
             if abs(state.p_G) > self.maxG or abs(state.c_X) > self.maxX:
                 terminates[i] = True
@@ -147,7 +144,7 @@ class DCPEnv(gym.Env):
         self.buffer = np.array([state for _ in range(self.buffer_size)])
         return self.buffer
 
-    def test(self, models, render=True, gif_path=None):
+    def test(self, models, render=True, gif_path=None, max_seconds = 600, fps=10):
         if not isinstance(models, (collections.Sequence, np.ndarray)):
             models = np.array([models])
         model_num = len(models)
@@ -155,19 +152,23 @@ class DCPEnv(gym.Env):
         frames = []
         actions = np.empty(model_num, dtype=np.int32)
         steps = 0
+        dt = 0
         while not any(deaths):
-            if render:
-                if gif_path is not None:
-                    frames.append(self.render(mode='rgb_array'))
-                else:
-                    self.render(mode='human')
-
             for m_i, model in enumerate(models):
                 actions[m_i], _ = model.action_value(obs_window)
             obs_window, _, deaths = self.step(actions)
             steps += 1
+            dt += DCPEnv.dt
+            if dt+1e-4 > 1./fps:
+                dt = 0
+                if gif_path is not None:
+                    frames.append(self.render(mode='rgb_array'))
+                if render:
+                    self.render(mode='human')
+            if steps*DCPEnv.dt >= max_seconds:
+                break
         if len(frames) > 0:
-            self._save_gif(frames, gif_path)
+            imageio.mimsave(gif_path, frames, fps=fps)
         death_list = {}
         for model, dead in zip(models, deaths):
             death_list[model.label] = dead

@@ -6,32 +6,34 @@ from agent import A2CAgent
 import sys
 import getopt
 import os
-from timeit import default_timer as timer
 
 helpMSG = """
 train.py usage
     -h:     Prints this message
     -g:     Use GPU for calculations (default is CPU)
+    -b:     Batch size (preferably power of 2). Default is 64.
+    -s:     Total sample count. Default is 128000.
+    -t:     Timestep in the environment. Default is 0.1 seconds.
+
+Models, registered from left to right in order of calling:
+
+    --lstm <mem_size>:  LSTMModel with specified window size
+    --cnn <mem_size>:   CNNModel with specified window size
+    --gru <mem_size>:   GRU model with specified window size
+    --rnn <mem_size>:   RNN model with specified window size
+    --simple:           SimpleAC model
+    --simple2:          SimpleAC2 model
 """
-batch_update = (512, 300)
-cfg_name = '.'.join(
-    ['AC2vsLSTM', 'b'+str(batch_update[0]), 'u'+str(batch_update[1])])
 
 
-def run():
-    config = Models.ModelConfiguration([
-        # Models.SimpleAC(num_actions=DCPEnv.actions_size),
-        Models.SimpleAC2(num_actions=DCPEnv.actions_size),
-        Models.LSTMModel(num_actions=DCPEnv.actions_size),
-    ], cfg_name)
-    env = DCPEnv(num_cars=config.num, buffer_size=config.window_size)
-    agent = A2CAgent()
-    starttime = timer()
-    episodes, deaths = agent.train(env, config, *batch_update)
+def run(models, batch, sample, timestep):
+    config = Models.ModelConfiguration(models, (batch, sample/batch, timestep))
+    env = DCPEnv(num_cars=config.num, buffer_size=config.window_size, time_step=timestep)
+    agent = A2CAgent(lr=1e-2)
+    episodes, deaths = agent.train(env, config, batch, sample//batch)
     config.save()
-    dt = timer() - starttime
 
-    fig = plt.figure()
+    fig = plt.figure(figsize=(16.0, 8.0))
     if(len(deaths) > 1):
         spec = fig.add_gridspec(ncols=2, nrows=1, width_ratios=[1, 4])
         ax = fig.add_subplot(spec[0])
@@ -49,36 +51,72 @@ def run():
     ax.set(xlabel='episodes', ylabel='seconds')
 
     plt.draw()
-    print(f"Finished training in {int(dt+1)} seconds, testing...")
-    if not os.path.exists('media'):
-        os.makedirs('media')
+    if not os.path.exists(f'media/{config.label}'):
+        os.makedirs(f'media/{config.label}')
     seconds, death_list = env.test(
-        config.get(), True, f'media/{config.label}.gif')
+        config.get(), False, f'media/{config.label}/test.gif')
     print(f'Alive for {int(seconds)} seconds')
     print('Died:')
     print(death_list)
     env.close()
-    plt.savefig(f'media/{config.label}.png', bbox_inches='tight')
+    plt.savefig(f'media/{config.label}/train.png', bbox_inches='tight')
     plt.show()
 
 
 def main(argv):
     mpl.rcParams['toolbar'] = 'None'
-
     os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
+    batch_size = 64
+    sample_count = 128000
+    time_step = 0.1
+    models = []
+
     try:
-        opts, args = getopt.getopt(argv, 'hg')
+        opts, args = getopt.getopt(
+            argv, 'hgb:s:t:', ['lstm=', 'cnn=', 'simple', 'simple2', 'rnn=', 'gru='])
     except getopt.GetoptError:
         print(helpMSG)
         sys.exit(2)
-    for opt, arg in opts:
-        if opt == "-h":
-            print(helpMSG)
-            sys.exit()
-        elif opt == "-g":
-            os.environ.pop('CUDA_VISIBLE_DEVICES')
-    run()
+    try:
+        for opt, arg in opts:
+            if opt == "-h":
+                print(helpMSG)
+                sys.exit()
+            elif opt == "-g":
+                os.environ.pop('CUDA_VISIBLE_DEVICES')
+            elif opt == "-b":
+                batch_size = int(arg)
+            elif opt == '-s':
+                sample_count = int(arg)
+            elif opt == "-t":
+                time_step = float(arg)
+            elif opt == '--lstm':
+                models.append(Models.LSTMModel(
+                    DCPEnv.actions_size, memory_size=(int(arg) if arg else 8)))
+            elif opt == '--cnn':
+                models.append(Models.CNNModel(
+                    DCPEnv.actions_size, memory_size=(int(arg) if arg else 8)))
+            elif opt == '--simple':
+                models.append(Models.SimpleAC(DCPEnv.actions_size))
+            elif opt == '--simple2':
+                models.append(Models.SimpleAC2(DCPEnv.actions_size))
+            elif opt == '--gru':
+                models.append(Models.GRUModel(DCPEnv.actions_size,
+                              memory_size=(int(arg) if arg else 8)))
+            elif opt == '--rnn':
+                models.append(Models.RNNModel(DCPEnv.actions_size,
+                              memory_size=(int(arg) if arg else 8)))
+    except Exception:
+        print(helpMSG)
+        sys.exit(2)
+
+    if len(models) == 0:
+        print('No models given!')
+        print(helpMSG)
+        sys.exit(2)
+
+    run(models, batch_size, sample_count, time_step)
 
 
 if __name__ == "__main__":

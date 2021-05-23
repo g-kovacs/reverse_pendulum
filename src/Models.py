@@ -6,26 +6,31 @@ import os
 from shutil import make_archive, rmtree, unpack_archive
 from ast import literal_eval
 from DCPEnv import DCPEnv
+from decimal import Decimal
 
 
 class ModelConfiguration:
     @property
     def window_size(self):
-        max_window = 1
-        for m in self.__models:
-            if m.input_size > max_window:
-                max_window = m.input_size
-        return max_window
+        return max([m.input_size for m in self.__models])
 
     @property
     def num(self):
         return len(self.__models)
 
-    def __init__(self, models, label='default'):
-        self.label = label
+    @property
+    def timestep(self):
+        return self.__time_step
+
+    def __init__(self, models, label_extend=None):
+
         if not isinstance(models, (collections.Sequence, np.ndarray)):
             models = [models]
+        self.label = 'vs'.join([model.label for model in models])
+        if isinstance(label_extend, tuple):
+            self.label = '_'.join([self.label, f'b{label_extend[0]}', f'u{int(label_extend[1])}', f't{Decimal(label_extend[2]):.1E}'])
         self.__models = models
+        self.__time_step = float(label_extend[2])
 
     def get(self):
         return self.__models
@@ -66,6 +71,8 @@ class ModelConfiguration:
     @classmethod
     def load(cls, cfg_name='default'):
         models = []
+        cfg_split = [s[1:] for s in cfg_name.split('_')]
+        label_extend = (int(cfg_split[1]), int(cfg_split[2]), float(cfg_split[3]))
         os.chdir('saves')
         unpack_archive(filename='.'.join((cfg_name, 'zip')), format='zip')
         cfg_path = os.path.join(cfg_name, 'config')
@@ -77,11 +84,13 @@ class ModelConfiguration:
                     cls_ = getattr(__import__(__name__), d['class'])
                     m = cls_(*tuple([DCPEnv.actions_size, *d.values()]))
                     m.compile()
-                    m.load_weights(os.path.join(os.getcwd(), cfg_name, name.strip(
-                        '\n'), 'save_data')).expect_partial()
+                    m.load_weights(os.path.join(os.getcwd(),
+                                                cfg_name,
+                                                name.strip('\n'),
+                                                'save_data')).expect_partial()
                     models.append(m)
         os.chdir("..")
-        return cls(models, cfg_name)
+        return cls(models, label_extend)
 
 
 class BaseModel(tf.keras.Model):
@@ -96,7 +105,7 @@ class BaseModel(tf.keras.Model):
         if name not in BaseModel.labels:
             BaseModel.labels[name] = 0
         BaseModel.labels[name] += 1
-        self.label = name + '_' + str(BaseModel.labels[name])
+        self.label = name + '-' + str(BaseModel.labels[name])
         self.input_size = input_size
         self.dist = BaseModel.ProbabilityDistribution()
 
@@ -106,7 +115,6 @@ class BaseModel(tf.keras.Model):
             obs = obs[None, :]
         logits, value = self.predict_on_batch(obs)
         action = self.dist.predict_on_batch(logits)
-        # TODO test action shapes
         return np.squeeze(action, axis=-1), np.squeeze(value, axis=-1)
 
     def get_config(self):
@@ -116,6 +124,7 @@ class BaseModel(tf.keras.Model):
 class CNNModel(BaseModel):
     def __init__(self, num_actions, name='CNNModel', memory_size=8, *args):
         super().__init__(name, memory_size)
+        self.label = '-'.join([self.label, f'mem{memory_size}'])
         self.cnn = kl.Conv1D(filters=2, kernel_size=4)
         self.norm = kl.BatchNormalization()
         self.activation = kl.ReLU()
@@ -143,8 +152,8 @@ class CNNModel(BaseModel):
 
 class LSTMModel(BaseModel):
     def __init__(self, num_actions, name='LSTMModel', memory_size=8, *args):
-        print('lstm: ', num_actions, name, memory_size, args)
         super().__init__(name, memory_size)
+        self.label = '-'.join([self.label, f'mem{memory_size}'])
         self.lstm = kl.LSTM(16)
         self.actor = kl.Dense(64, activation='relu',
                               kernel_initializer='he_normal')
@@ -202,6 +211,48 @@ class SimpleAC(BaseModel):
         x = tf.convert_to_tensor(inputs)
 
         features = self.decoder(x)
+        hidden_logits = self.actor(features)
+        hidden_values = self.critic(features)
+        return self.logits(hidden_logits), self.value(hidden_values)
+      
+
+class GRUModel(BaseModel):
+    def __init__(self, num_actions, name='GRUModel', memory_size=8, *args):
+        super().__init__(name, memory_size)
+        self.label = '-'.join([self.label, f'mem{memory_size}'])
+        self.gru = kl.GRU(32)
+        self.actor = kl.Dense(32, activation='relu', kernel_initializer='he_normal')
+        self.critic = kl.Dense(32, activation='relu', kernel_initializer='he_normal')
+
+        self.value = kl.Dense(1, name='value')
+        self.logits = kl.Dense(num_actions, name='policy_logits')
+
+    def call(self, inputs, **kwargs):
+        x = tf.convert_to_tensor(inputs)
+        # Decoder
+        features = self.gru(x)
+        # Actor-Critic
+        hidden_logits = self.actor(features)
+        hidden_values = self.critic(features)
+        return self.logits(hidden_logits), self.value(hidden_values)
+      
+
+class RNNModel(BaseModel):
+    def __init__(self, num_actions, name='RNNModel', memory_size=8, *args):
+        super().__init__(name, memory_size)
+        self.label = '-'.join([self.label, f'mem{memory_size}'])
+        self.rnn = kl.SimpleRNN(32)
+        self.actor = kl.Dense(32, activation='relu', kernel_initializer='he_normal')
+        self.critic = kl.Dense(32, activation='relu', kernel_initializer='he_normal')
+
+        self.value = kl.Dense(1, name='value')
+        self.logits = kl.Dense(num_actions, name='policy_logits')
+
+    def call(self, inputs, **kwargs):
+        x = tf.convert_to_tensor(inputs)
+        # Decoder
+        features = self.rnn(x)
+        # Actor-Critic
         hidden_logits = self.actor(features)
         hidden_values = self.critic(features)
         return self.logits(hidden_logits), self.value(hidden_values)
