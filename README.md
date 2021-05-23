@@ -17,7 +17,7 @@ https://packaging.python.org/guides/installing-using-pip-and-virtual-environment
 
 A virtuális környezet neve 'env'. A 'python_requirements.txt' fájlban megtalálhatók a szükséges függőségek.</br>
 
-Arra figyeljetek, hogy a használni kívánt Python verzióval futtassátok a virtualenvet és akkor arra a verzióra készít linkeket. :)
+A használni kívánt Python verzióval kell futtatni a virtualenvet és akkor arra a verzióra készít linkeket.
 
 ### Telepítés
 
