@@ -11,13 +11,16 @@ helpMSG = """
 train.py usage
     -h:     Prints this message
     -g:     Use GPU for calculations (default is CPU)
-    -b:     Batch size (power of 2)
-    -s:     Total sample count
+    -b:     Batch size (preferably power of 2). Default is 64.
+    -s:     Total sample count. Default is 128000.
+    -t:     Timestep in the environment. Default is 0.1 seconds.
 
 Models, registered from left to right in order of calling:
 
-    --lstm [mem_size]:  LSTMModel with specified window size
-    --cnn [mem_size]:   CNNModel with specified window size
+    --lstm <mem_size>:  LSTMModel with specified window size
+    --cnn <mem_size>:   CNNModel with specified window size
+    --gru <mem_size>:   GRU model with specified window size
+    --rnn <mem_size>:   RNN model with specified window size
     --simple:           SimpleAC model
     --simple2:          SimpleAC2 model
 """
@@ -64,7 +67,7 @@ def main(argv):
     mpl.rcParams['toolbar'] = 'None'
     os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
-    batch_size = 16
+    batch_size = 64
     sample_count = 128000
     time_step = 0.1
     models = []
